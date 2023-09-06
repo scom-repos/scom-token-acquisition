@@ -1,0 +1,44 @@
+{
+    "name": "@scom/demo-scom-token-acquisition",
+    "version": "0.1.0",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "@ijstech/components": "^0.1.39",
+        "@ijstech/eth-contract": "^0.1.10",
+        "@ijstech/eth-wallet": "^0.1.55"
+    },
+    "devDependencies": {
+        "@ijstech/cli": "^0.1.28",
+        "@ijstech/compiler": "^0.1.22",
+        "@scom/dapp": "^0.1.11",
+        "@scom/oswap-bakery-swap-contract": "^0.1.2",
+        "@scom/oswap-chainlink-contract": "^0.1.1",
+        "@scom/oswap-cross-chain-bridge-contract": "^0.1.0",
+        "@scom/oswap-impossible-swap-contract": "^0.1.1",
+        "@scom/oswap-openswap-contract": "0.1.4",
+        "@scom/oswap-time-is-money-contract": "^0.1.0",
+        "@scom/oswap-trader-joe-contract": "0.1.2",  
+        "@scom/scom-commission-fee-setup": "^0.1.1",
+        "@scom/scom-commission-proxy-contract": "^0.1.9",
+        "@scom/scom-dapp-container": "^0.1.12",
+        "@scom/scom-dex-list": "^0.1.5",
+        "@scom/scom-multicall": "^0.1.0",
+        "@scom/scom-network-list": "^0.1.5",
+        "@scom/scom-network-picker": "^0.1.4",
+        "@scom/scom-swap": "^0.1.18",
+        "@scom/scom-tx-status-modal": "^0.1.0",
+        "@scom/scom-token-input": "^0.1.7",
+        "@scom/scom-token-list": "^0.1.5",
+        "@scom/scom-token-modal": "^0.1.2",
+        "@scom/scom-wallet-modal": "^0.1.0",
+        "@scom/scom-token-acquisition": "file:./ref"
+    },
+    "scripts": {
+        "cp:libs": "rm -rf ref && mkdir ref && cp ../package.json ref/package.json && cp -r ../dist ref/dist && cp -r ../pluginTypes ref/pluginTypes && cp -r ../pluginTypes ref/types",
+        "build": "npm run cp:libs && rm -rf dist && npx @ijstech/compiler",
+        "serve": "npx @ijstech/cli serve 8080",
+        "test": "npm run build && npm run serve"
+    }
+}

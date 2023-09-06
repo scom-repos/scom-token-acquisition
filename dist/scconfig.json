@@ -1,0 +1,20 @@
+{
+    "name": "@scom/scom-token-acquisition",
+    "type": "widget",
+    "version": "0.1.0",
+    "dependencies": [
+        "@ijstech/components",
+        "@scom/scom-stepper",
+        "@scom/scom-network-list",
+        "@scom/scom-commission-fee-setup",
+        "@scom/scom-token-list",
+        "@scom/scom-wallet-modal",
+        "@scom/scom-dapp-container",
+        "@scom/scom-dex-list",
+        "@scom/scom-token-input",
+        "@scom/scom-network-picker",
+        "@scom/scom-tx-status-modal",
+        "@scom/scom-commission-proxy-contract",
+        "@scom/scom-swap"
+    ]
+}

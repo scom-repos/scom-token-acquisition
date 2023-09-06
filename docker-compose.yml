@@ -1,0 +1,36 @@
+version: "3"
+services:
+  install:
+    image: node:18
+    # user: node
+    volumes:
+      - .:/app
+    command: bash -c "cd /app && rm -rf node_modules && rm -f package-lock.json && npm i && cd /app/test && rm -rf node_modules && rm -f package-lock.json && npm i"
+  installTest:
+    # user: node
+    image: node:18
+    volumes:
+      - .:/app
+    command: bash -c "cd /app/test && rm -rf node_modules && rm -f package-lock.json && npm i"
+  build: 
+    image: node:18
+    # user: node
+    volumes:
+      - .:/app
+    command: bash -c "cd /app && npm run build"  
+  serve:
+    image: node:18
+    # user: node
+    ports:
+      - "8075:8080"
+    volumes:
+      - .:/app
+    command: bash -c "cd /app && npm run build && npm run serve"
+  test:
+    image: node:18
+    # user: node
+    ports:
+      - "8050:8080"
+    volumes:
+      - .:/app
+    command: bash -c "cd /app && npm run test"
