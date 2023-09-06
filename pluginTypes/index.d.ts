@@ -9,12 +9,10 @@ declare module "@scom/scom-token-acquisition/interface.ts" {
         campaignId?: number;
         category: any;
         providers: any;
-        commissions?: any;
         tokens?: any;
         defaultChainId: number;
         wallets: any;
         networks: any;
-        showHeader?: boolean;
         logo?: string;
         title?: string;
     }
@@ -44,7 +42,7 @@ declare module "@scom/scom-token-acquisition" {
         onChanged: (target: Control, activeStep: number) => void;
         private stepper;
         private pnlwidgets;
-        private widgetsMapper;
+        private widgetContainers;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTokenAcquisitionElement, parent?: Container): Promise<ScomTokenAcquisition>;
         get data(): ISwapData[];

@@ -32,14 +32,14 @@ define("@scom/scom-token-acquisition/interface.ts", ["require", "exports"], func
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
 });
-define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-swap"], function (require, exports, components_2, index_css_1, scom_swap_1) {
+define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts"], function (require, exports, components_2, index_css_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let ScomTokenAcquisition = class ScomTokenAcquisition extends components_2.Module {
         constructor(parent, options) {
             super(parent, options);
             this.isRendering = false;
-            this.widgetsMapper = new Map();
+            this.widgetContainers = new Map();
             this.onStepChanged = this.onStepChanged.bind(this);
         }
         static async create(options, parent) {
@@ -53,32 +53,33 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         }
         set data(value) {
             this._data = value !== null && value !== void 0 ? value : [];
-            this.resetData();
             this.renderUI();
         }
-        async renderUI() {
+        renderUI() {
+            var _a;
             if (this.isRendering)
                 return;
             this.isRendering = true;
+            this.resetData();
             this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
             for (let i = 0; i < this.data.length; i++) {
                 const widgetContainer = this.$render("i-panel", { visible: i === this.stepper.activeStep });
-                const swapData = this.data[i];
-                const swapEl = await scom_swap_1.default.create(Object.assign({}, swapData.data));
+                const swapData = (_a = this.data[i]) === null || _a === void 0 ? void 0 : _a.data;
+                const swapEl = (this.$render("i-scom-swap", { category: swapData.category, providers: swapData.providers, defaultChainId: swapData.defaultChainId, wallets: swapData.wallets, networks: swapData.networks, campaignId: swapData.campaignId, tokens: swapData.tokens, logo: swapData.logo, title: swapData.title }));
                 widgetContainer.clearInnerHTML();
                 widgetContainer.appendChild(swapEl);
                 this.pnlwidgets.appendChild(widgetContainer);
-                this.widgetsMapper.set(i, widgetContainer);
+                this.widgetContainers.set(i, widgetContainer);
             }
             this.isRendering = false;
         }
         resetData() {
             this.pnlwidgets.clearInnerHTML();
-            this.widgetsMapper = new Map();
+            this.widgetContainers = new Map();
         }
         onStepChanged() {
-            for (let i = 0; i < this.widgetsMapper.size; i++) {
-                const el = this.widgetsMapper.get(i);
+            for (let i = 0; i < this.widgetContainers.size; i++) {
+                const el = this.widgetContainers.get(i);
                 if (el)
                     el.visible = this.stepper.activeStep === i;
             }

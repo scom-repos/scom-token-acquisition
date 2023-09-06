@@ -33,7 +33,7 @@ export default class ScomTokenAcquisition extends Module {
 
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
-  private widgetsMapper: Map<number, Panel> = new Map();
+  private widgetContainers: Map<number, Panel> = new Map();
 
   constructor(parent?: Container, options?: any) {
     super(parent, options);
@@ -51,34 +51,46 @@ export default class ScomTokenAcquisition extends Module {
   }
   set data(value: ISwapData[]) {
     this._data = value ?? [];
-    this.resetData();
     this.renderUI();
   }
 
-  private async renderUI() {
+  private renderUI() {
     if (this.isRendering) return;
     this.isRendering = true;
+    this.resetData();
     this.stepper.steps = [...this.data].map(item => ({name: item.stepName}));
     for (let i = 0; i < this.data.length; i++) {
       const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
-      const swapData = this.data[i];
-      const swapEl = await ScomSwap.create({...swapData.data});
+      const swapData = this.data[i]?.data;
+      const swapEl = (
+        <i-scom-swap
+          category={swapData.category}
+          providers={swapData.providers}
+          defaultChainId={swapData.defaultChainId}
+          wallets={swapData.wallets}
+          networks={swapData.networks}
+          campaignId={swapData.campaignId}
+          tokens={swapData.tokens}
+          logo={swapData.logo}
+          title={swapData.title}
+        ></i-scom-swap>
+      )
       widgetContainer.clearInnerHTML();
       widgetContainer.appendChild(swapEl);
       this.pnlwidgets.appendChild(widgetContainer);
-      this.widgetsMapper.set(i, widgetContainer);
+      this.widgetContainers.set(i, widgetContainer);
     }
     this.isRendering = false;
   }
 
   private resetData() {
     this.pnlwidgets.clearInnerHTML();
-    this.widgetsMapper = new Map();
+    this.widgetContainers = new Map();
   }
 
   private onStepChanged() {
-    for (let i = 0; i < this.widgetsMapper.size; i++) {
-      const el = this.widgetsMapper.get(i)
+    for (let i = 0; i < this.widgetContainers.size; i++) {
+      const el = this.widgetContainers.get(i)
       if (el) el.visible = this.stepper.activeStep === i;
     }
     if (this.onChanged) this.onChanged(this, this.stepper.activeStep);
