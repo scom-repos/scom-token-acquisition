@@ -89,15 +89,6 @@ export default class Module1 extends Module {
             },
           ],
           category: 'aggregator',
-          tokens: [
-            {
-              name: 'OpenSwap',
-              address: '0x78d9D80E67bC80A11efbf84B7c8A65Da51a8EF3C',
-              symbol: 'OSWAP',
-              decimals: 18,
-              chainId: 43113,
-            },
-          ],
           defaultChainId: 43113,
           networks: [
             {
@@ -109,6 +100,7 @@ export default class Module1 extends Module {
               name: 'metamask',
             },
           ],
+          title: 'Swap Title'
         },
       },
     ];

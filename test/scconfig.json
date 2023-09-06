@@ -17,6 +17,7 @@
     "@scom/scom-network-picker": "*",
     "@scom/scom-token-list": "*",
     "@scom/dapp": "*",
+    "@scom/scom-swap": "*",
     "@scom/scom-token-acquisition": "*"
   },
   "packages": [

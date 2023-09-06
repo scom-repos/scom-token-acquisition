@@ -9,8 +9,8 @@ import {
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
 import { customStyles } from './index.css';
-import { ISwapData } from './interface';
 import ScomSwap from '@scom/scom-swap';
+import { ISwapData } from './interface';
 
 interface ScomTokenAcquisitionElement extends ControlElement {
   data: ISwapData[];
@@ -46,12 +46,20 @@ export default class ScomTokenAcquisition extends Module {
     return self;
   }
 
-  get data() {
+  private get data() {
     return this._data ?? [];
   }
-  set data(value: ISwapData[]) {
+  private set data(value: ISwapData[]) {
     this._data = value ?? [];
+  }
+
+  setData(value: ISwapData[]) {
+    this.data = value ?? [];
     this.renderUI();
+  }
+
+  getData() {
+    return this._data ?? [];
   }
 
   private renderUI() {
@@ -70,9 +78,9 @@ export default class ScomTokenAcquisition extends Module {
           wallets={swapData.wallets}
           networks={swapData.networks}
           campaignId={swapData.campaignId}
-          tokens={swapData.tokens}
-          logo={swapData.logo}
-          title={swapData.title}
+          tokens={swapData.tokens ?? []}
+          logo={swapData.logo ?? ''}
+          title={swapData.title ?? ''}
         ></i-scom-swap>
       )
       widgetContainer.clearInnerHTML();
@@ -101,7 +109,7 @@ export default class ScomTokenAcquisition extends Module {
     super.init();
     this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
     const data = this.getAttribute('data', true);
-    if (data) this.data = data;
+    if (data) this.setData(data);
     this.isReadyCallbackQueued = false;
     this.executeReadyCallback();
   }
