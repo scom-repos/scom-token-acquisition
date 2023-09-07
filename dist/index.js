@@ -63,7 +63,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             return (_a = this._data) !== null && _a !== void 0 ? _a : [];
         }
         renderUI() {
-            var _a, _b, _c, _d;
+            var _a, _b, _c, _d, _e;
             if (this.isRendering)
                 return;
             this.isRendering = true;
@@ -72,14 +72,9 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             for (let i = 0; i < this.data.length; i++) {
                 const widgetContainer = this.$render("i-panel", { visible: i === this.stepper.activeStep });
                 const { properties, tag } = ((_a = this.data[i]) === null || _a === void 0 ? void 0 : _a.data) || {};
-                const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, campaignId: properties.campaignId, tokens: (_b = properties.tokens) !== null && _b !== void 0 ? _b : [], logo: (_c = properties.logo) !== null && _c !== void 0 ? _c : '', title: (_d = properties.title) !== null && _d !== void 0 ? _d : '' }));
-                swapEl.setTag(tag);
-                // if (swapEl.getConfigurators) {
-                //   this.embeddersConfigurator = swapEl.getConfigurators().find((configurator: any) => configurator.target === "Embedders");
-                //   if (tag && this.embeddersConfigurator?.setTag) {
-                //     await this.embeddersConfigurator.setTag(tag);
-                //   }
-                // }
+                const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, campaignId: properties.campaignId, commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '' }));
+                if (tag && swapEl.setTag)
+                    swapEl.setTag(tag);
                 widgetContainer.clearInnerHTML();
                 widgetContainer.appendChild(swapEl);
                 this.pnlwidgets.appendChild(widgetContainer);

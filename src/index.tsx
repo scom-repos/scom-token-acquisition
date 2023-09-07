@@ -78,6 +78,7 @@ export default class ScomTokenAcquisition extends Module {
           wallets={properties.wallets}
           networks={properties.networks}
           campaignId={properties.campaignId}
+          commissions={properties.commissions ?? []}
           tokens={properties.tokens ?? []}
           logo={properties.logo ?? ''}
           title={properties.title ?? ''}
