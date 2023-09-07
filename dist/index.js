@@ -53,10 +53,17 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         }
         set data(value) {
             this._data = value !== null && value !== void 0 ? value : [];
+        }
+        setData(value) {
+            this.data = value !== null && value !== void 0 ? value : [];
             this.renderUI();
         }
-        renderUI() {
+        getData() {
             var _a;
+            return (_a = this._data) !== null && _a !== void 0 ? _a : [];
+        }
+        renderUI() {
+            var _a, _b, _c, _d, _e;
             if (this.isRendering)
                 return;
             this.isRendering = true;
@@ -64,8 +71,10 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
             for (let i = 0; i < this.data.length; i++) {
                 const widgetContainer = this.$render("i-panel", { visible: i === this.stepper.activeStep });
-                const swapData = (_a = this.data[i]) === null || _a === void 0 ? void 0 : _a.data;
-                const swapEl = (this.$render("i-scom-swap", { category: swapData.category, providers: swapData.providers, defaultChainId: swapData.defaultChainId, wallets: swapData.wallets, networks: swapData.networks, campaignId: swapData.campaignId, tokens: swapData.tokens, logo: swapData.logo, title: swapData.title }));
+                const { properties, tag } = ((_a = this.data[i]) === null || _a === void 0 ? void 0 : _a.data) || {};
+                const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, campaignId: properties.campaignId, commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '' }));
+                if (tag && swapEl.setTag)
+                    swapEl.setTag(tag);
                 widgetContainer.clearInnerHTML();
                 widgetContainer.appendChild(swapEl);
                 this.pnlwidgets.appendChild(widgetContainer);
@@ -92,7 +101,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
             const data = this.getAttribute('data', true);
             if (data)
-                this.data = data;
+                this.setData(data);
             this.isReadyCallbackQueued = false;
             this.executeReadyCallback();
         }

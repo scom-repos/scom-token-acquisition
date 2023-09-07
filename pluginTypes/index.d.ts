@@ -5,20 +5,14 @@ declare module "@scom/scom-token-acquisition/index.css.ts" {
 }
 /// <amd-module name="@scom/scom-token-acquisition/interface.ts" />
 declare module "@scom/scom-token-acquisition/interface.ts" {
-    export interface ISwapConfigUI {
-        campaignId?: number;
-        category: any;
-        providers: any;
-        tokens?: any;
-        defaultChainId: number;
-        wallets: any;
-        networks: any;
-        logo?: string;
-        title?: string;
+    import { ISwapWidgetData } from "@scom/scom-swap";
+    interface IWidgetData {
+        properties: ISwapWidgetData;
+        tag?: any;
     }
     export interface ISwapData {
         stepName: string;
-        data: ISwapConfigUI;
+        data: IWidgetData;
     }
 }
 /// <amd-module name="@scom/scom-token-acquisition" />
@@ -45,8 +39,10 @@ declare module "@scom/scom-token-acquisition" {
         private widgetContainers;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTokenAcquisitionElement, parent?: Container): Promise<ScomTokenAcquisition>;
-        get data(): ISwapData[];
-        set data(value: ISwapData[]);
+        private get data();
+        private set data(value);
+        setData(value: ISwapData[]): void;
+        getData(): ISwapData[];
         private renderUI;
         private resetData;
         private onStepChanged;

@@ -9,8 +9,8 @@ import {
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
 import { customStyles } from './index.css';
-import { ISwapData } from './interface';
 import ScomSwap from '@scom/scom-swap';
+import { ISwapData } from './interface';
 
 interface ScomTokenAcquisitionElement extends ControlElement {
   data: ISwapData[];
@@ -46,12 +46,20 @@ export default class ScomTokenAcquisition extends Module {
     return self;
   }
 
-  get data() {
+  private get data() {
     return this._data ?? [];
   }
-  set data(value: ISwapData[]) {
+  private set data(value: ISwapData[]) {
     this._data = value ?? [];
+  }
+
+  setData(value: ISwapData[]) {
+    this.data = value ?? [];
     this.renderUI();
+  }
+
+  getData() {
+    return this._data ?? [];
   }
 
   private renderUI() {
@@ -61,20 +69,22 @@ export default class ScomTokenAcquisition extends Module {
     this.stepper.steps = [...this.data].map(item => ({name: item.stepName}));
     for (let i = 0; i < this.data.length; i++) {
       const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
-      const swapData = this.data[i]?.data;
+      const { properties, tag } = this.data[i]?.data || {};
       const swapEl = (
         <i-scom-swap
-          category={swapData.category}
-          providers={swapData.providers}
-          defaultChainId={swapData.defaultChainId}
-          wallets={swapData.wallets}
-          networks={swapData.networks}
-          campaignId={swapData.campaignId}
-          tokens={swapData.tokens}
-          logo={swapData.logo}
-          title={swapData.title}
+          category={properties.category}
+          providers={properties.providers}
+          defaultChainId={properties.defaultChainId}
+          wallets={properties.wallets}
+          networks={properties.networks}
+          campaignId={properties.campaignId}
+          commissions={properties.commissions ?? []}
+          tokens={properties.tokens ?? []}
+          logo={properties.logo ?? ''}
+          title={properties.title ?? ''}
         ></i-scom-swap>
       )
+      if (tag && swapEl.setTag) swapEl.setTag(tag);
       widgetContainer.clearInnerHTML();
       widgetContainer.appendChild(swapEl);
       this.pnlwidgets.appendChild(widgetContainer);
@@ -101,7 +111,7 @@ export default class ScomTokenAcquisition extends Module {
     super.init();
     this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
     const data = this.getAttribute('data', true);
-    if (data) this.data = data;
+    if (data) this.setData(data);
     this.isReadyCallbackQueued = false;
     this.executeReadyCallback();
   }

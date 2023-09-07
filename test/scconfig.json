@@ -16,8 +16,7 @@
     "@scom/scom-network-list": "*",    
     "@scom/scom-network-picker": "*",
     "@scom/scom-token-list": "*",
-    "@scom/dapp": "*",
-    "@scom/scom-token-acquisition": "*"
+    "@scom/dapp": "*"
   },
   "packages": [
     "@scom/oswap-bakery-swap-contract",
