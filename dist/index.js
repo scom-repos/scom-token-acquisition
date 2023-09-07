@@ -71,8 +71,15 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
             for (let i = 0; i < this.data.length; i++) {
                 const widgetContainer = this.$render("i-panel", { visible: i === this.stepper.activeStep });
-                const swapData = (_a = this.data[i]) === null || _a === void 0 ? void 0 : _a.data;
-                const swapEl = (this.$render("i-scom-swap", { category: swapData.category, providers: swapData.providers, defaultChainId: swapData.defaultChainId, wallets: swapData.wallets, networks: swapData.networks, campaignId: swapData.campaignId, tokens: (_b = swapData.tokens) !== null && _b !== void 0 ? _b : [], logo: (_c = swapData.logo) !== null && _c !== void 0 ? _c : '', title: (_d = swapData.title) !== null && _d !== void 0 ? _d : '' }));
+                const { properties, tag } = ((_a = this.data[i]) === null || _a === void 0 ? void 0 : _a.data) || {};
+                const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, campaignId: properties.campaignId, tokens: (_b = properties.tokens) !== null && _b !== void 0 ? _b : [], logo: (_c = properties.logo) !== null && _c !== void 0 ? _c : '', title: (_d = properties.title) !== null && _d !== void 0 ? _d : '' }));
+                swapEl.setTag(tag);
+                // if (swapEl.getConfigurators) {
+                //   this.embeddersConfigurator = swapEl.getConfigurators().find((configurator: any) => configurator.target === "Embedders");
+                //   if (tag && this.embeddersConfigurator?.setTag) {
+                //     await this.embeddersConfigurator.setTag(tag);
+                //   }
+                // }
                 widgetContainer.clearInnerHTML();
                 widgetContainer.appendChild(swapEl);
                 this.pnlwidgets.appendChild(widgetContainer);

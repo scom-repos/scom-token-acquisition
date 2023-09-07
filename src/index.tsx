@@ -69,20 +69,21 @@ export default class ScomTokenAcquisition extends Module {
     this.stepper.steps = [...this.data].map(item => ({name: item.stepName}));
     for (let i = 0; i < this.data.length; i++) {
       const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
-      const swapData = this.data[i]?.data;
+      const { properties, tag } = this.data[i]?.data || {};
       const swapEl = (
         <i-scom-swap
-          category={swapData.category}
-          providers={swapData.providers}
-          defaultChainId={swapData.defaultChainId}
-          wallets={swapData.wallets}
-          networks={swapData.networks}
-          campaignId={swapData.campaignId}
-          tokens={swapData.tokens ?? []}
-          logo={swapData.logo ?? ''}
-          title={swapData.title ?? ''}
+          category={properties.category}
+          providers={properties.providers}
+          defaultChainId={properties.defaultChainId}
+          wallets={properties.wallets}
+          networks={properties.networks}
+          campaignId={properties.campaignId}
+          tokens={properties.tokens ?? []}
+          logo={properties.logo ?? ''}
+          title={properties.title ?? ''}
         ></i-scom-swap>
       )
+      if (tag && swapEl.setTag) swapEl.setTag(tag);
       widgetContainer.clearInnerHTML();
       widgetContainer.appendChild(swapEl);
       this.pnlwidgets.appendChild(widgetContainer);

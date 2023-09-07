@@ -6,9 +6,13 @@ declare module "@scom/scom-token-acquisition/index.css.ts" {
 /// <amd-module name="@scom/scom-token-acquisition/interface.ts" />
 declare module "@scom/scom-token-acquisition/interface.ts" {
     import { ISwapWidgetData } from "@scom/scom-swap";
+    interface IWidgetData {
+        properties: ISwapWidgetData;
+        tag?: any;
+    }
     export interface ISwapData {
         stepName: string;
-        data: ISwapWidgetData;
+        data: IWidgetData;
     }
 }
 /// <amd-module name="@scom/scom-token-acquisition" />
