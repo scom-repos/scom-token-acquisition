@@ -7,7 +7,8 @@
     "dependencies": {
         "@ijstech/components": "^0.1.39",
         "@ijstech/eth-contract": "^0.1.10",
-        "@ijstech/eth-wallet": "^0.1.55"
+        "@ijstech/eth-wallet": "^0.1.55", 
+        "@scom/scom-token-acquisition": "file:./ref"
     },
     "devDependencies": {
         "@ijstech/cli": "^0.1.28",
@@ -32,8 +33,7 @@
         "@scom/scom-token-input": "^0.1.7",
         "@scom/scom-token-list": "^0.1.5",
         "@scom/scom-token-modal": "^0.1.2",
-        "@scom/scom-wallet-modal": "^0.1.0",
-        "@scom/scom-token-acquisition": "file:./ref"
+        "@scom/scom-wallet-modal": "^0.1.0"
     },
     "scripts": {
         "cp:libs": "rm -rf ref && mkdir ref && cp ../package.json ref/package.json && cp -r ../dist ref/dist && cp -r ../pluginTypes ref/pluginTypes && cp -r ../pluginTypes ref/types",
