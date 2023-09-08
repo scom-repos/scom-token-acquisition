@@ -29,7 +29,7 @@ export default class Module1 extends Module {
                 chainId: 43113,
               },
             ],
-            category: 'fixed-pair',
+            category: 'aggregator',
             tokens: [
               {
                 name: 'USDT',
@@ -101,8 +101,35 @@ export default class Module1 extends Module {
               {
                 name: 'metamask',
               },
+            ]
+          }
+        }
+      },
+      {
+        stepName: 'Step 3',
+        data: {
+          properties: {
+            providers: [
+              {
+                caption: 'OpenSwap',
+                image: 'ipfs://bafkreidoi5pywhyo4hqdltlosvrvefgqj4nuclmjl325exzmjgnyl2cc4y',
+                key: 'OpenSwap',
+                dexId: 1,
+                chainId: 43113,
+              },
             ],
-            title: 'Swap Title'
+            category: 'aggregator',
+            defaultChainId: 43113,
+            networks: [
+              {
+                chainId: 43113,
+              },
+            ],
+            wallets: [
+              {
+                name: 'metamask',
+              },
+            ]
           }
         }
       },
@@ -115,6 +142,9 @@ export default class Module1 extends Module {
 
   init() {
     super.init();
+    setTimeout(() => {
+      this.elm.onUpdateStatus()
+    }, 500)
   }
 
   render() {

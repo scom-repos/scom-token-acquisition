@@ -15,6 +15,17 @@ declare module "@scom/scom-token-acquisition/interface.ts" {
         data: IWidgetData;
     }
 }
+/// <amd-module name="@scom/scom-token-acquisition/utils/const.ts" />
+declare module "@scom/scom-token-acquisition/utils/const.ts" {
+    export const enum EventId {
+        Paid = "Paid",
+        ExpertModeChanged = "ExpertModeChanged"
+    }
+}
+/// <amd-module name="@scom/scom-token-acquisition/utils/index.ts" />
+declare module "@scom/scom-token-acquisition/utils/index.ts" {
+    export * from "@scom/scom-token-acquisition/utils/const.ts";
+}
 /// <amd-module name="@scom/scom-token-acquisition" />
 declare module "@scom/scom-token-acquisition" {
     import { Container, Control, ControlElement, Module } from '@ijstech/components';
@@ -32,6 +43,7 @@ declare module "@scom/scom-token-acquisition" {
     }
     export default class ScomTokenAcquisition extends Module {
         private _data;
+        private _clientEvents;
         private isRendering;
         onChanged: (target: Control, activeStep: number) => void;
         private stepper;
@@ -46,6 +58,10 @@ declare module "@scom/scom-token-acquisition" {
         private renderUI;
         private resetData;
         private onStepChanged;
+        private initEvents;
+        private onPaid;
+        onUpdateStatus(): void;
+        onHide(): void;
         init(): void;
         render(): any;
     }

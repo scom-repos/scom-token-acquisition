@@ -1,4 +1,5 @@
 import {
+  application,
   Container,
   Control,
   ControlElement,
@@ -11,6 +12,7 @@ import ScomStepper from '@scom/scom-stepper';
 import { customStyles } from './index.css';
 import ScomSwap from '@scom/scom-swap';
 import { ISwapData } from './interface';
+import { EventId } from './utils';
 
 interface ScomTokenAcquisitionElement extends ControlElement {
   data: ISwapData[];
@@ -28,6 +30,7 @@ declare global {
 @customElements('i-scom-token-acquisition')
 export default class ScomTokenAcquisition extends Module {
   private _data: ISwapData[];
+  private _clientEvents: any[] = [];
   private isRendering: boolean = false;
   public onChanged: (target: Control, activeStep: number) => void;
 
@@ -77,7 +80,7 @@ export default class ScomTokenAcquisition extends Module {
           defaultChainId={properties.defaultChainId}
           wallets={properties.wallets}
           networks={properties.networks}
-          campaignId={properties.campaignId}
+          // campaignId={properties.campaignId ?? 0}
           commissions={properties.commissions ?? []}
           tokens={properties.tokens ?? []}
           logo={properties.logo ?? ''}
@@ -106,12 +109,36 @@ export default class ScomTokenAcquisition extends Module {
     if (this.onChanged) this.onChanged(this, this.stepper.activeStep);
   }
 
+  private initEvents() {
+    this._clientEvents.push(
+      application.EventBus.register(this, EventId.Paid, this.onPaid)
+    )
+  }
+
+  private onPaid() {
+    this.stepper.updateStatus(this.stepper.activeStep, true)
+  }
+
+  // For test
+  onUpdateStatus() {
+    for (let i = 0; i < this.data.length; i++)
+    this.stepper.updateStatus(i, true);
+  }
+
+  onHide(): void {
+    for (let event of this._clientEvents) {
+      event.unregister();
+    }
+    this._clientEvents = [];
+  }
+
   init() {
     this.isReadyCallbackQueued = true;
     super.init();
     this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
     const data = this.getAttribute('data', true);
     if (data) this.setData(data);
+    this.initEvents();
     this.isReadyCallbackQueued = false;
     this.executeReadyCallback();
   }
