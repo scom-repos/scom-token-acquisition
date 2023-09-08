@@ -25,6 +25,7 @@ declare module "@scom/scom-token-acquisition/utils/const.ts" {
 /// <amd-module name="@scom/scom-token-acquisition/utils/index.ts" />
 declare module "@scom/scom-token-acquisition/utils/index.ts" {
     export * from "@scom/scom-token-acquisition/utils/const.ts";
+    export const generateUUID: () => string;
 }
 /// <amd-module name="@scom/scom-token-acquisition" />
 declare module "@scom/scom-token-acquisition" {
@@ -51,6 +52,7 @@ declare module "@scom/scom-token-acquisition" {
         private stepper;
         private pnlwidgets;
         private widgetContainers;
+        private widgets;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTokenAcquisitionElement, parent?: Container): Promise<ScomTokenAcquisition>;
         private get data();

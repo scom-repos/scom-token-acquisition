@@ -13,7 +13,7 @@ import ScomStepper from '@scom/scom-stepper';
 import { customStyles } from './index.css';
 import ScomSwap from '@scom/scom-swap';
 import { ISwapData } from './interface';
-import { EventId } from './utils';
+import { EventId, generateUUID } from './utils';
 
 interface ScomTokenAcquisitionElement extends ControlElement {
   data: ISwapData[];
@@ -41,6 +41,7 @@ export default class ScomTokenAcquisition extends Module {
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
   private widgetContainers: Map<number, Panel> = new Map();
+  private widgets: Map<string, ScomSwap> = new Map();
 
   constructor(parent?: Container, options?: any) {
     super(parent, options);
@@ -92,10 +93,13 @@ export default class ScomTokenAcquisition extends Module {
           title={properties.title ?? ''}
         ></i-scom-swap>
       )
+      swapEl.id = `swap-${generateUUID()}`;
+      swapEl.setAttribute('data-step', `${i}`);
       if (tag && swapEl.setTag) swapEl.setTag(tag);
       widgetContainer.clearInnerHTML();
       widgetContainer.appendChild(swapEl);
       this.pnlwidgets.appendChild(widgetContainer);
+      this.widgets.set(swapEl.id, swapEl);
       this.widgetContainers.set(i, widgetContainer);
     }
     this.isRendering = false;
@@ -104,6 +108,7 @@ export default class ScomTokenAcquisition extends Module {
   private resetData() {
     this.pnlwidgets.clearInnerHTML();
     this.widgetContainers = new Map();
+    this.widgets = new Map();
   }
 
   private onStepChanged() {
@@ -124,8 +129,14 @@ export default class ScomTokenAcquisition extends Module {
     )
   }
 
-  private onPaid() {
-    this.stepper.updateStatus(this.stepper.activeStep, true)
+  private onPaid(paidData: any) {
+    const { id, data } = paidData;
+    if (!id) return;
+    const widget = this.widgets.get(id);
+    if (widget) {
+      const step = widget.getAttribute('data-step');
+      this.stepper.updateStatus(+step, true);
+    }
   }
 
   // For test
