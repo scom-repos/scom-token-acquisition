@@ -18,6 +18,7 @@ import { EventId } from './utils';
 interface ScomTokenAcquisitionElement extends ControlElement {
   data: ISwapData[];
   onChanged?: (target: Control, activeStep: number) => void;
+  onDone?: (target: Control) => void;
 }
 
 declare global {
@@ -35,6 +36,7 @@ export default class ScomTokenAcquisition extends Module {
   private _clientEvents: any[] = [];
   private isRendering: boolean = false;
   public onChanged: (target: Control, activeStep: number) => void;
+  public onDone: (target: Control) => void;
 
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
@@ -43,6 +45,7 @@ export default class ScomTokenAcquisition extends Module {
   constructor(parent?: Container, options?: any) {
     super(parent, options);
     this.onStepChanged = this.onStepChanged.bind(this);
+    this.onStepDone = this.onStepDone.bind(this);
   }
 
   static async create(options?: ScomTokenAcquisitionElement, parent?: Container) {
@@ -111,6 +114,10 @@ export default class ScomTokenAcquisition extends Module {
     if (this.onChanged) this.onChanged(this, this.stepper.activeStep);
   }
 
+  private onStepDone() {
+    if (this.onDone) this.onDone(this);
+  }
+
   private initEvents() {
     this._clientEvents.push(
       application.EventBus.register(this, EventId.Paid, this.onPaid)
@@ -138,6 +145,7 @@ export default class ScomTokenAcquisition extends Module {
     this.isReadyCallbackQueued = true;
     super.init();
     this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
+    this.onDone = this.getAttribute('onDone', true) || this.onDone;
     const data = this.getAttribute('data', true);
     if (data) this.setData(data);
     this.initEvents();
@@ -156,6 +164,7 @@ export default class ScomTokenAcquisition extends Module {
           <i-scom-stepper
             id="stepper"
             onChanged={this.onStepChanged}
+            onDone={this.onStepDone}
           ></i-scom-stepper>
           <i-panel>
             <i-vstack id="pnlwidgets" width="100%" />
@@ -170,8 +179,10 @@ export default class ScomTokenAcquisition extends Module {
     widget = this;
     target.appendChild(widget);
     await widget.ready();
-    const { properties } = options;
-    widget.setData(properties?.data || []);
+    const { data = [], onChanged, onDone } = options?.properties || {};
+    widget.setData(data);
+    if (onChanged) this.onChanged = onChanged;
+    if (onDone) this.onDone = onDone;
 		return { widget };
 	}
 }

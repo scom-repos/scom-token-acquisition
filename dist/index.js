@@ -66,6 +66,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.isRendering = false;
             this.widgetContainers = new Map();
             this.onStepChanged = this.onStepChanged.bind(this);
+            this.onStepDone = this.onStepDone.bind(this);
         }
         static async create(options, parent) {
             let self = new this(parent, options);
@@ -122,6 +123,10 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             if (this.onChanged)
                 this.onChanged(this, this.stepper.activeStep);
         }
+        onStepDone() {
+            if (this.onDone)
+                this.onDone(this);
+        }
         initEvents() {
             this._clientEvents.push(components_2.application.EventBus.register(this, "Paid" /* EventId.Paid */, this.onPaid));
         }
@@ -143,6 +148,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.isReadyCallbackQueued = true;
             super.init();
             this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
+            this.onDone = this.getAttribute('onDone', true) || this.onDone;
             const data = this.getAttribute('data', true);
             if (data)
                 this.setData(data);
@@ -153,7 +159,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         render() {
             return (this.$render("i-panel", { class: index_css_1.customStyles },
                 this.$render("i-vstack", { width: "100%", height: "100%", padding: { top: '1rem' }, gap: "1rem" },
-                    this.$render("i-scom-stepper", { id: "stepper", onChanged: this.onStepChanged }),
+                    this.$render("i-scom-stepper", { id: "stepper", onChanged: this.onStepChanged, onDone: this.onStepDone }),
                     this.$render("i-panel", null,
                         this.$render("i-vstack", { id: "pnlwidgets", width: "100%" })))));
         }
@@ -162,8 +168,12 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             widget = this;
             target.appendChild(widget);
             await widget.ready();
-            const { properties } = options;
-            widget.setData((properties === null || properties === void 0 ? void 0 : properties.data) || []);
+            const { data = [], onChanged, onDone } = (options === null || options === void 0 ? void 0 : options.properties) || {};
+            widget.setData(data);
+            if (onChanged)
+                this.onChanged = onChanged;
+            if (onDone)
+                this.onDone = onDone;
             return { widget };
         }
     };
