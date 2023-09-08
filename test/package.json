@@ -5,9 +5,9 @@
         "node": ">=18.0.0"
     },
     "dependencies": {
-        "@ijstech/components": "^0.1.39",
-        "@ijstech/eth-contract": "^0.1.10",
-        "@ijstech/eth-wallet": "^0.1.55", 
+        "@ijstech/components": "^0.1.57",
+        "@ijstech/eth-wallet": "^0.1.57",
+        "@ijstech/eth-contract": "^0.1.18",
         "@scom/scom-token-acquisition": "file:./ref"
     },
     "devDependencies": {
