@@ -6,7 +6,8 @@ import {
   customElements,
   Module,
   Panel,
-  VStack
+  VStack,
+  customModule
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
 import { customStyles } from './index.css';
@@ -27,6 +28,7 @@ declare global {
   }
 }
 
+@customModule
 @customElements('i-scom-token-acquisition')
 export default class ScomTokenAcquisition extends Module {
   private _data: ISwapData[];
@@ -148,6 +150,7 @@ export default class ScomTokenAcquisition extends Module {
       <i-panel class={customStyles}>
         <i-vstack
           width="100%" height="100%"
+          padding={{top: '1rem'}}
           gap="1rem"
         >
           <i-scom-stepper
@@ -161,4 +164,14 @@ export default class ScomTokenAcquisition extends Module {
       </i-panel>
     )
   }
+
+  async handleFlowStage(target: Control, stage: string, options: any) {
+		let widget;
+    widget = this;
+    target.appendChild(widget);
+    await widget.ready();
+    const { properties } = options;
+    widget.setData(properties?.data || []);
+		return { widget };
+	}
 }

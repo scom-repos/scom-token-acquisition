@@ -152,13 +152,23 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         }
         render() {
             return (this.$render("i-panel", { class: index_css_1.customStyles },
-                this.$render("i-vstack", { width: "100%", height: "100%", gap: "1rem" },
+                this.$render("i-vstack", { width: "100%", height: "100%", padding: { top: '1rem' }, gap: "1rem" },
                     this.$render("i-scom-stepper", { id: "stepper", onChanged: this.onStepChanged }),
                     this.$render("i-panel", null,
                         this.$render("i-vstack", { id: "pnlwidgets", width: "100%" })))));
         }
+        async handleFlowStage(target, stage, options) {
+            let widget;
+            widget = this;
+            target.appendChild(widget);
+            await widget.ready();
+            const { properties } = options;
+            widget.setData((properties === null || properties === void 0 ? void 0 : properties.data) || []);
+            return { widget };
+        }
     };
     ScomTokenAcquisition = __decorate([
+        components_2.customModule,
         (0, components_2.customElements)('i-scom-token-acquisition')
     ], ScomTokenAcquisition);
     exports.default = ScomTokenAcquisition;
