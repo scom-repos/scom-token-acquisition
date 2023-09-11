@@ -25,6 +25,7 @@ declare module "@scom/scom-token-acquisition/utils/const.ts" {
 /// <amd-module name="@scom/scom-token-acquisition/utils/index.ts" />
 declare module "@scom/scom-token-acquisition/utils/index.ts" {
     export * from "@scom/scom-token-acquisition/utils/const.ts";
+    export const generateUUID: () => string;
 }
 /// <amd-module name="@scom/scom-token-acquisition" />
 declare module "@scom/scom-token-acquisition" {
@@ -33,6 +34,7 @@ declare module "@scom/scom-token-acquisition" {
     interface ScomTokenAcquisitionElement extends ControlElement {
         data: ISwapData[];
         onChanged?: (target: Control, activeStep: number) => void;
+        onDone?: (target: Control) => void;
     }
     global {
         namespace JSX {
@@ -46,9 +48,11 @@ declare module "@scom/scom-token-acquisition" {
         private _clientEvents;
         private isRendering;
         onChanged: (target: Control, activeStep: number) => void;
+        onDone: (target: Control) => void;
         private stepper;
         private pnlwidgets;
         private widgetContainers;
+        private widgets;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTokenAcquisitionElement, parent?: Container): Promise<ScomTokenAcquisition>;
         private get data();
@@ -58,6 +62,7 @@ declare module "@scom/scom-token-acquisition" {
         private renderUI;
         private resetData;
         private onStepChanged;
+        private onStepDone;
         private initEvents;
         private onPaid;
         onUpdateStatus(): void;

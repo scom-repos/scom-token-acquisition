@@ -53,10 +53,18 @@ define("@scom/scom-token-acquisition/utils/const.ts", ["require", "exports"], fu
 define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@scom/scom-token-acquisition/utils/const.ts"], function (require, exports, const_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.generateUUID = void 0;
     ///<amd-module name='@scom/scom-token-acquisition/utils/index.ts'/> 
     __exportStar(const_1, exports);
+    const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
+    exports.generateUUID = generateUUID;
 });
-define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts"], function (require, exports, components_2, index_css_1) {
+define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts"], function (require, exports, components_2, index_css_1, utils_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let ScomTokenAcquisition = class ScomTokenAcquisition extends components_2.Module {
@@ -65,7 +73,9 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this._clientEvents = [];
             this.isRendering = false;
             this.widgetContainers = new Map();
+            this.widgets = new Map();
             this.onStepChanged = this.onStepChanged.bind(this);
+            this.onStepDone = this.onStepDone.bind(this);
         }
         static async create(options, parent) {
             let self = new this(parent, options);
@@ -100,11 +110,14 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, 
                     // campaignId={properties.campaignId ?? 0}
                     commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '' }));
+                swapEl.id = `swap-${(0, utils_1.generateUUID)()}`;
+                swapEl.setAttribute('data-step', `${i}`);
                 if (tag && swapEl.setTag)
                     swapEl.setTag(tag);
                 widgetContainer.clearInnerHTML();
                 widgetContainer.appendChild(swapEl);
                 this.pnlwidgets.appendChild(widgetContainer);
+                this.widgets.set(swapEl.id, swapEl);
                 this.widgetContainers.set(i, widgetContainer);
             }
             this.isRendering = false;
@@ -112,6 +125,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         resetData() {
             this.pnlwidgets.clearInnerHTML();
             this.widgetContainers = new Map();
+            this.widgets = new Map();
         }
         onStepChanged() {
             for (let i = 0; i < this.widgetContainers.size; i++) {
@@ -122,11 +136,22 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             if (this.onChanged)
                 this.onChanged(this, this.stepper.activeStep);
         }
+        onStepDone() {
+            if (this.onDone)
+                this.onDone(this);
+        }
         initEvents() {
             this._clientEvents.push(components_2.application.EventBus.register(this, "Paid" /* EventId.Paid */, this.onPaid));
         }
-        onPaid() {
-            this.stepper.updateStatus(this.stepper.activeStep, true);
+        onPaid(paidData) {
+            const { id, data } = paidData;
+            if (!id)
+                return;
+            const widget = this.widgets.get(id);
+            if (widget) {
+                const step = widget.getAttribute('data-step');
+                this.stepper.updateStatus(+step, true);
+            }
         }
         // For test
         onUpdateStatus() {
@@ -143,6 +168,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.isReadyCallbackQueued = true;
             super.init();
             this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
+            this.onDone = this.getAttribute('onDone', true) || this.onDone;
             const data = this.getAttribute('data', true);
             if (data)
                 this.setData(data);
@@ -153,7 +179,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         render() {
             return (this.$render("i-panel", { class: index_css_1.customStyles },
                 this.$render("i-vstack", { width: "100%", height: "100%", padding: { top: '1rem' }, gap: "1rem" },
-                    this.$render("i-scom-stepper", { id: "stepper", onChanged: this.onStepChanged }),
+                    this.$render("i-scom-stepper", { id: "stepper", onChanged: this.onStepChanged, onDone: this.onStepDone }),
                     this.$render("i-panel", null,
                         this.$render("i-vstack", { id: "pnlwidgets", width: "100%" })))));
         }
@@ -162,8 +188,12 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             widget = this;
             target.appendChild(widget);
             await widget.ready();
-            const { properties } = options;
-            widget.setData((properties === null || properties === void 0 ? void 0 : properties.data) || []);
+            const { data = [], onChanged, onDone } = (options === null || options === void 0 ? void 0 : options.properties) || {};
+            widget.setData(data);
+            if (onChanged)
+                this.onChanged = onChanged;
+            if (onDone)
+                this.onDone = onDone;
             return { widget };
         }
     };
