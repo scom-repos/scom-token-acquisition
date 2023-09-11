@@ -7,13 +7,15 @@ import {
   Module,
   Panel,
   VStack,
-  customModule
+  customModule,
+  Styles
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
 import { customStyles } from './index.css';
 import ScomSwap from '@scom/scom-swap';
 import { ISwapData } from './interface';
 import { EventId, generateUUID } from './utils';
+const Theme = Styles.Theme.ThemeVars;
 
 interface ScomTokenAcquisitionElement extends ControlElement {
   data: ISwapData[];
@@ -71,38 +73,44 @@ export default class ScomTokenAcquisition extends Module {
     return this._data ?? [];
   }
 
-  private renderUI() {
+  private async renderUI() {
     if (this.isRendering) return;
     this.isRendering = true;
     this.resetData();
     this.stepper.steps = [...this.data].map(item => ({name: item.stepName}));
     for (let i = 0; i < this.data.length; i++) {
       const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
-      const { properties, tag } = this.data[i]?.data || {};
-      const swapEl = (
-        <i-scom-swap
-          category={properties.category}
-          providers={properties.providers}
-          defaultChainId={properties.defaultChainId}
-          wallets={properties.wallets}
-          networks={properties.networks}
-          // campaignId={properties.campaignId ?? 0}
-          commissions={properties.commissions ?? []}
-          tokens={properties.tokens ?? []}
-          logo={properties.logo ?? ''}
-          title={properties.title ?? ''}
-        ></i-scom-swap>
-      )
-      swapEl.id = `swap-${generateUUID()}`;
-      swapEl.setAttribute('data-step', `${i}`);
-      if (tag && swapEl.setTag) swapEl.setTag(tag);
-      widgetContainer.clearInnerHTML();
-      widgetContainer.appendChild(swapEl);
       this.pnlwidgets.appendChild(widgetContainer);
-      this.widgets.set(swapEl.id, swapEl);
       this.widgetContainers.set(i, widgetContainer);
     }
+    await this.renderSwapWidget(this.stepper.activeStep);
     this.isRendering = false;
+  }
+
+  private async renderSwapWidget(index: number) {
+    const widgetContainer = this.widgetContainers.get(index);
+    if (!widgetContainer) return;
+    const { properties, tag } = this.data[index]?.data || {};
+    const swapEl = (
+      <i-scom-swap
+        category={properties.category}
+        providers={properties.providers}
+        defaultChainId={properties.defaultChainId}
+        wallets={properties.wallets}
+        networks={properties.networks}
+        // campaignId={properties.campaignId ?? 0}
+        commissions={properties.commissions ?? []}
+        tokens={properties.tokens ?? []}
+        logo={properties.logo ?? ''}
+        title={properties.title ?? ''}
+      ></i-scom-swap>
+    )
+    swapEl.id = `swap-${generateUUID()}`;
+    swapEl.setAttribute('data-step', `${index}`);
+    if (tag && swapEl.setTag) swapEl.setTag(tag);
+    widgetContainer.clearInnerHTML();
+    widgetContainer.appendChild(swapEl);
+    this.widgets.set(swapEl.id, swapEl);
   }
 
   private resetData() {
@@ -111,10 +119,14 @@ export default class ScomTokenAcquisition extends Module {
     this.widgets = new Map();
   }
 
-  private onStepChanged() {
+  private async onStepChanged() {
     for (let i = 0; i < this.widgetContainers.size; i++) {
       const el = this.widgetContainers.get(i)
       if (el) el.visible = this.stepper.activeStep === i;
+    }
+    const widgetContainer = this.widgetContainers.get(this.stepper.activeStep);
+    if (!widgetContainer.hasChildNodes()) {
+      await this.renderSwapWidget(this.stepper.activeStep);
     }
     if (this.onChanged) this.onChanged(this, this.stepper.activeStep);
   }
@@ -134,15 +146,45 @@ export default class ScomTokenAcquisition extends Module {
     if (!id) return;
     const widget = this.widgets.get(id);
     if (widget) {
-      const step = widget.getAttribute('data-step');
-      this.stepper.updateStatus(+step, true);
+      const step = Number(widget.getAttribute('data-step'));
+      this.stepper.updateStatus(step, true);
+      widget.remove();
+      this.widgets.delete(id);
+      this.renderCompletedStep(step);
     }
+  }
+
+  private renderCompletedStep(step: number) {
+    const widgetContainer = this.widgetContainers.get(step);
+    if (!widgetContainer) return;
+    widgetContainer.appendChild(
+      <i-vstack gap="1rem" horizontalAlignment="center">
+        <i-label caption="Step completed successfully!"></i-label>
+        <i-panel>
+          <i-button
+            caption='Restart Step'
+            padding={{top: '0.5rem', bottom: '0.5rem', left: '1rem', right: '1rem'}}
+            font={{color: Theme.colors.primary.contrastText}}
+            onClick={() => this.renderSwapWidget(step)}
+          ></i-button>
+        </i-panel>
+      </i-vstack>
+    )
   }
 
   // For test
   onUpdateStatus() {
-    for (let i = 0; i < this.data.length; i++)
-    this.stepper.updateStatus(i, true);
+    const widgetKeys = this.widgets.keys();
+    for (let i = 0; i < this.data.length; i++) {
+      this.stepper.updateStatus(i, true);
+      const key = widgetKeys.next().value;
+      const widget = key && this.widgets.get(key) as ScomSwap;
+      if (widget) {
+        widget.remove();
+        this.widgets.delete(widget.id);
+      }
+      this.renderCompletedStep(i);
+    }
   }
 
   onHide(): void {
