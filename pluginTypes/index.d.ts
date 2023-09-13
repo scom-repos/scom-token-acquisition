@@ -71,6 +71,7 @@ declare module "@scom/scom-token-acquisition" {
         onHide(): void;
         init(): void;
         render(): any;
+        getAPI(url: string, paramsObj?: any): Promise<any>;
         handleFlowStage(target: Control, stage: string, options: any): Promise<{
             widget: any;
         }>;

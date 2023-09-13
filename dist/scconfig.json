@@ -15,6 +15,7 @@
         "@scom/scom-network-picker",
         "@scom/scom-tx-status-modal",
         "@scom/scom-commission-proxy-contract",
-        "@scom/scom-swap"
+        "@scom/scom-swap",
+        "@ijstech/eth-wallet"
     ]
 }

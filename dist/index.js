@@ -64,7 +64,7 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@s
     };
     exports.generateUUID = generateUUID;
 });
-define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts"], function (require, exports, components_2, index_css_1, utils_1) {
+define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts", "@ijstech/eth-wallet", "@scom/scom-token-list"], function (require, exports, components_2, index_css_1, utils_1, eth_wallet_1, scom_token_list_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const Theme = components_2.Styles.Theme.ThemeVars;
@@ -120,7 +120,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             const { properties, tag } = ((_a = this.data[index]) === null || _a === void 0 ? void 0 : _a.data) || {};
             const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, 
                 // campaignId={properties.campaignId ?? 0}
-                commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '' }));
+                commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '', defaultInputValue: properties.defaultInputValue, defaultOutputValue: properties.defaultOutputValue }));
             swapEl.id = `swap-${(0, utils_1.generateUUID)()}`;
             swapEl.setAttribute('data-step', `${index}`);
             if (tag && swapEl.setTag)
@@ -189,7 +189,6 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 }
                 this.renderCompletedStep(i);
             }
-            console.log(this.widgets);
         }
         onHide() {
             for (let event of this._clientEvents) {
@@ -216,12 +215,120 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     this.$render("i-panel", null,
                         this.$render("i-vstack", { id: "pnlwidgets", width: "100%" })))));
         }
+        async getAPI(url, paramsObj) {
+            let queries = '';
+            if (paramsObj) {
+                try {
+                    queries = new URLSearchParams(paramsObj).toString();
+                }
+                catch (err) {
+                    console.log('err', err);
+                }
+            }
+            let fullURL = url + (queries ? `?${queries}` : '');
+            const response = await fetch(fullURL, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+            });
+            return response.json();
+        }
         async handleFlowStage(target, stage, options) {
             let widget;
             widget = this;
             target.appendChild(widget);
             await widget.ready();
-            const { data = [], onChanged, onDone } = (options === null || options === void 0 ? void 0 : options.properties) || {};
+            let properties = {
+                data: [],
+                onChanged: options === null || options === void 0 ? void 0 : options.onChanged,
+                onDone: options === null || options === void 0 ? void 0 : options.onDone
+            };
+            let chainIds = new Set();
+            let tokenRequirements = options === null || options === void 0 ? void 0 : options.tokenRequirements;
+            if (tokenRequirements) {
+                for (let tokenRequirement of tokenRequirements) {
+                    chainIds.add(tokenRequirement.tokenOut.chainId);
+                    tokenRequirement.tokensIn.forEach(token => {
+                        chainIds.add(token.chainId);
+                    });
+                }
+            }
+            const routeAPI = 'https://route.openswap.xyz/trading/v1/route';
+            let tokenMapByChainId = {};
+            let tokenBalancesByChainId = {};
+            for (let chainId of chainIds) {
+                const rpcWallet = eth_wallet_1.RpcWallet.getRpcWallet(chainId);
+                let tokenMap = scom_token_list_1.tokenStore.updateTokenMapData(chainId);
+                tokenMapByChainId[chainId] = tokenMap;
+                tokenBalancesByChainId[chainId] = await scom_token_list_1.tokenStore.updateAllTokenBalances(rpcWallet);
+            }
+            const networkMap = components_2.application.store["networkMap"];
+            if (tokenRequirements) {
+                for (let tokenRequirement of tokenRequirements) {
+                    const tokenOut = tokenRequirement.tokenOut;
+                    const tokenOutAddress = tokenOut.address ? tokenOut.address.toLowerCase() : scom_token_list_1.ChainNativeTokenByChainId[tokenOut.chainId].symbol;
+                    const tokenOutObj = tokenMapByChainId[tokenOut.chainId][tokenOutAddress];
+                    const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
+                    const tokenOutBalanceDecimals = eth_wallet_1.Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
+                    const wethToken = scom_token_list_1.WETHByChainId[tokenOut.chainId];
+                    for (let tokenIn of tokenRequirement.tokensIn) {
+                        const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_1.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
+                        const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
+                        const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
+                        const tokenInBalanceDecimals = eth_wallet_1.Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
+                        let tokenOutAmountDecimals = eth_wallet_1.Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
+                        let remainingAmountOutDecimals = new eth_wallet_1.BigNumber(tokenOutAmountDecimals).minus(tokenOutBalanceDecimals);
+                        let routeObjArr = await this.getAPI(routeAPI, {
+                            chainId: tokenOut.chainId,
+                            tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
+                            tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
+                            amountOut: remainingAmountOutDecimals,
+                            ignoreHybrid: 1
+                        });
+                        if (routeObjArr.length > 0) {
+                            const amountIn = routeObjArr[0].amountIn;
+                            if (new eth_wallet_1.BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
+                                const network = networkMap[tokenOut.chainId];
+                                const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
+                                properties.data.push({
+                                    stepName: stepName,
+                                    data: {
+                                        properties: {
+                                            providers: [
+                                                {
+                                                    key: 'OpenSwap',
+                                                    chainId: tokenOut.chainId,
+                                                },
+                                            ],
+                                            category: 'aggregator',
+                                            tokens: [
+                                                Object.assign(Object.assign({}, tokenInObj), { chainId: tokenIn.chainId }),
+                                                Object.assign(Object.assign({}, tokenOutObj), { chainId: tokenOut.chainId }),
+                                            ],
+                                            defaultInputValue: 0,
+                                            defaultOutputValue: eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
+                                            defaultChainId: tokenOut.chainId,
+                                            networks: [
+                                                {
+                                                    chainId: tokenOut.chainId,
+                                                },
+                                            ],
+                                            wallets: [
+                                                {
+                                                    name: 'metamask',
+                                                },
+                                            ]
+                                        }
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            const { data = [], onChanged, onDone } = properties || {};
             widget.setData(data);
             if (onChanged)
                 this.onChanged = onChanged;
