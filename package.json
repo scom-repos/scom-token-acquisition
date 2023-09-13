@@ -24,6 +24,6 @@
     "@ijstech/cli": "^0.1.26",
     "@ijstech/compiler": "^0.1.18",
     "@ijstech/components": "^0.1.29",
-    "@scom/scom-stepper": "https://github.com/scom-repos/scom-stepper"
+    "@scom/scom-stepper": "^0.1.0"
   }
 }
