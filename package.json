@@ -19,7 +19,7 @@
     "@ijstech/eth-wallet": "^0.1.52",
     "@scom/scom-token-list": "^0.1.1",
     "@scom/scom-swap": "^0.1.18",
-    "@scom/scom-stepper": "https://github.com/scom-repos/scom-stepper"
+    "@scom/scom-stepper": "^0.1.0"
   },
   "devDependencies": {
     "@ijstech/cli": "^0.1.26",
