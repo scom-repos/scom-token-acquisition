@@ -18,12 +18,12 @@
     "@ijstech/eth-contract": "^0.1.14",
     "@ijstech/eth-wallet": "^0.1.52",
     "@scom/scom-token-list": "^0.1.1",
-    "@scom/scom-swap": "^0.1.18"
+    "@scom/scom-swap": "^0.1.18",
+    "@scom/scom-stepper": "https://github.com/scom-repos/scom-stepper"
   },
   "devDependencies": {
     "@ijstech/cli": "^0.1.26",
     "@ijstech/compiler": "^0.1.18",
-    "@ijstech/components": "^0.1.29",
-    "@scom/scom-stepper": "https://github.com/scom-repos/scom-stepper"
+    "@ijstech/components": "^0.1.29"
   }
 }

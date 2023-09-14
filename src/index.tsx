@@ -79,14 +79,29 @@ export default class ScomTokenAcquisition extends Module {
     if (this.isRendering) return;
     this.isRendering = true;
     this.resetData();
-    this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
-    for (let i = 0; i < this.data.length; i++) {
-      const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
-      this.pnlwidgets.appendChild(widgetContainer);
-      this.widgetContainers.set(i, widgetContainer);
+    if (this.data.length === 0) {
+      this.renderEmptyWidget();
     }
-    await this.renderSwapWidget(this.stepper.activeStep);
+    else {
+      this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
+      for (let i = 0; i < this.data.length; i++) {
+        const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
+        this.pnlwidgets.appendChild(widgetContainer);
+        this.widgetContainers.set(i, widgetContainer);
+      }
+      await this.renderSwapWidget(this.stepper.activeStep);
+    }
     this.isRendering = false;
+  }
+
+  private renderEmptyWidget() {
+    const widgetContainer = (
+      <i-panel>
+        <i-label caption="No data to display"></i-label>
+      </i-panel>
+    );
+    this.pnlwidgets.appendChild(widgetContainer);
+
   }
 
   private async renderSwapWidget(index: number) {

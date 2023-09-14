@@ -60,6 +60,7 @@ declare module "@scom/scom-token-acquisition" {
         setData(value: ISwapData[]): void;
         getData(): ISwapData[];
         private renderUI;
+        private renderEmptyWidget;
         private renderSwapWidget;
         private resetData;
         private onStepChanged;
