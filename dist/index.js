@@ -221,7 +221,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         render() {
             return (this.$render("i-panel", { class: index_css_1.customStyles },
                 this.$render("i-vstack", { width: "100%", height: "100%", padding: { top: '1rem' }, gap: "1rem" },
-                    this.$render("i-scom-stepper", { id: "stepper", onChanged: this.onStepChanged, onDone: this.onStepDone }),
+                    this.$render("i-scom-stepper", { id: "stepper", showNavButtons: false, onChanged: this.onStepChanged, onDone: this.onStepDone }),
                     this.$render("i-panel", null,
                         this.$render("i-vstack", { id: "pnlwidgets", width: "100%" })))));
         }

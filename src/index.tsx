@@ -235,6 +235,7 @@ export default class ScomTokenAcquisition extends Module {
         >
           <i-scom-stepper
             id="stepper"
+            showNavButtons={false}
             onChanged={this.onStepChanged}
             onDone={this.onStepDone}
           ></i-scom-stepper>
