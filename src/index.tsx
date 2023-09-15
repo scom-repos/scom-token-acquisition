@@ -8,10 +8,11 @@ import {
   Panel,
   VStack,
   customModule,
-  Styles
+  Styles,
+  Icon
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
-import { customStyles } from './index.css';
+import { customStyles, expandablePanelStyle } from './index.css';
 import ScomSwap from '@scom/scom-swap';
 import { ISwapData } from './interface';
 import { EventId, generateUUID } from './utils';
@@ -44,7 +45,7 @@ export default class ScomTokenAcquisition extends Module {
 
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
-  private widgetContainers: Map<number, Panel> = new Map();
+  private stepContainers: Map<number, Panel> = new Map();
   private widgets: Map<string, ScomSwap> = new Map();
 
   constructor(parent?: Container, options?: any) {
@@ -83,30 +84,45 @@ export default class ScomTokenAcquisition extends Module {
       this.renderEmptyWidget();
     }
     else {
-      this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
+      // this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
+      this.stepper.steps = [...this.data].map(item => ({ name: 'Acquire Tokens' }));
       for (let i = 0; i < this.data.length; i++) {
-        const widgetContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
-        this.pnlwidgets.appendChild(widgetContainer);
-        this.widgetContainers.set(i, widgetContainer);
+        const stepContainer = <i-panel visible={i === this.stepper.activeStep}></i-panel> as Panel;
+        this.pnlwidgets.appendChild(stepContainer);
+        this.stepContainers.set(i, stepContainer);
       }
-      await this.renderSwapWidget(this.stepper.activeStep);
+      await this.renderStepContainer(this.stepper.activeStep);
     }
     this.isRendering = false;
   }
 
   private renderEmptyWidget() {
-    const widgetContainer = (
+    const stepContainer = (
       <i-panel>
         <i-label caption="No data to display"></i-label>
       </i-panel>
     );
-    this.pnlwidgets.appendChild(widgetContainer);
+    this.pnlwidgets.appendChild(stepContainer);
 
   }
 
-  private async renderSwapWidget(index: number) {
-    const widgetContainer = this.widgetContainers.get(index);
-    if (!widgetContainer) return;
+  toggleExpandablePanel(c: Control) {
+    const icon: Icon = c.querySelector('i-icon.expandable-icon');
+    const contentPanel: Panel = c.parentNode.querySelector(`i-panel.${expandablePanelStyle}`);
+    if (c.classList.contains('expanded')) {
+      icon.name = 'angle-right';
+      contentPanel.visible = false;
+      c.classList.remove('expanded');
+    } else {
+      icon.name = 'angle-down';
+      contentPanel.visible = true;
+      c.classList.add('expanded');
+    }
+  }
+
+  private async renderStepContainer(index: number) {
+    const stepContainer = this.stepContainers.get(index);
+    if (!stepContainer) return;
     const { properties, tag } = this.data[index]?.data || {};
     const swapEl = (
       <i-scom-swap
@@ -127,25 +143,44 @@ export default class ScomTokenAcquisition extends Module {
     swapEl.id = `swap-${generateUUID()}`;
     swapEl.setAttribute('data-step', `${index}`);
     if (tag && swapEl.setTag) swapEl.setTag(tag);
-    widgetContainer.clearInnerHTML();
-    widgetContainer.appendChild(swapEl);
+    stepContainer.clearInnerHTML();
+    const stepName = this.data[index].stepName;
+    const acquireTokensPanel = (
+      <i-vstack padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}>
+        <i-hstack
+          horizontalAlignment="space-between"
+          verticalAlignment="center"
+          padding={{ top: '0.5rem', bottom: '0.5rem' }}
+          class="expanded pointer"
+          onClick={this.toggleExpandablePanel}
+        >
+          <i-label caption={stepName} font={{ size: '1rem' }} lineHeight={1.3}></i-label>
+          <i-icon class="expandable-icon" width={20} height={28} fill={Theme.text.primary} name="angle-down"></i-icon>
+        </i-hstack>
+        <i-panel class={expandablePanelStyle}>
+          {swapEl}
+        </i-panel>
+      </i-vstack>
+    )
+    // stepContainer.appendChild(swapEl);
+    stepContainer.appendChild(acquireTokensPanel);
     this.widgets.set(swapEl.id, swapEl);
   }
 
   private resetData() {
     this.pnlwidgets.clearInnerHTML();
-    this.widgetContainers = new Map();
+    this.stepContainers = new Map();
     this.widgets = new Map();
   }
 
   private async onStepChanged() {
-    for (let i = 0; i < this.widgetContainers.size; i++) {
-      const el = this.widgetContainers.get(i)
+    for (let i = 0; i < this.stepContainers.size; i++) {
+      const el = this.stepContainers.get(i)
       if (el) el.visible = this.stepper.activeStep === i;
     }
-    const widgetContainer = this.widgetContainers.get(this.stepper.activeStep);
-    if (!widgetContainer.hasChildNodes()) {
-      await this.renderSwapWidget(this.stepper.activeStep);
+    const stepContainer = this.stepContainers.get(this.stepper.activeStep);
+    if (!stepContainer.hasChildNodes()) {
+      await this.renderStepContainer(this.stepper.activeStep);
     }
     if (this.onChanged) this.onChanged(this, this.stepper.activeStep);
   }
@@ -174,9 +209,9 @@ export default class ScomTokenAcquisition extends Module {
   }
 
   private renderCompletedStep(step: number) {
-    const widgetContainer = this.widgetContainers.get(step);
-    if (!widgetContainer) return;
-    widgetContainer.appendChild(
+    const stepContainer = this.stepContainers.get(step);
+    if (!stepContainer) return;
+    stepContainer.appendChild(
       <i-vstack gap="1rem" horizontalAlignment="center">
         <i-label caption="Step completed successfully!"></i-label>
         <i-panel>
@@ -184,7 +219,7 @@ export default class ScomTokenAcquisition extends Module {
             caption='Restart Step'
             padding={{ top: '0.5rem', bottom: '0.5rem', left: '1rem', right: '1rem' }}
             font={{ color: Theme.colors.primary.contrastText }}
-            onClick={() => this.renderSwapWidget(step)}
+            onClick={() => this.renderStepContainer(step)}
           ></i-button>
         </i-panel>
       </i-vstack>
@@ -266,6 +301,46 @@ export default class ScomTokenAcquisition extends Module {
     return response.json();
   }
 
+  calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string) {
+    return {
+      stepName: stepName,
+      data: {
+        properties: {
+          providers: [
+            {
+              key: 'OpenSwap',
+              chainId: tokenOutChainId,
+            },
+          ],
+          category: 'aggregator',
+          tokens: [
+            {
+              ...tokenInObj,
+              chainId: tokenInChainId,
+            },
+            {
+              ...tokenOutObj,
+              chainId: tokenOutChainId,
+            },
+          ],
+          defaultInputValue: 0,
+          defaultOutputValue: Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
+          defaultChainId: tokenOutChainId,
+          networks: [
+            {
+              chainId: tokenOutChainId,
+            },
+          ],
+          wallets: [
+            {
+              name: 'metamask',
+            },
+          ]
+        }
+      }
+    };
+  }
+
   async handleFlowStage(target: Control, stage: string, options: any) {
     let widget;
     widget = this;
@@ -308,65 +383,34 @@ export default class ScomTokenAcquisition extends Module {
         const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
         const tokenOutBalanceDecimals = Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
         const wethToken = WETHByChainId[tokenOut.chainId];
+        let tokenOutAmountDecimals = Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
+        let remainingAmountOutDecimals = tokenOutAmountDecimals.gt(tokenOutBalanceDecimals) ? tokenOutAmountDecimals.minus(tokenOutBalanceDecimals) : new BigNumber(0);
+        let tokenOutPropertiesDataArr = [];
         for (let tokenIn of tokenRequirement.tokensIn) {
           const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : ChainNativeTokenByChainId[tokenIn.chainId].symbol;
           const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
           const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
           const tokenInBalanceDecimals = Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
-          let tokenOutAmountDecimals = Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
-          let remainingAmountOutDecimals = new BigNumber(tokenOutAmountDecimals).minus(tokenOutBalanceDecimals);
           let routeObjArr: any[] = await this.getAPI(routeAPI, {
             chainId: tokenOut.chainId,
             tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
             tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
-            amountOut: remainingAmountOutDecimals,
+            amountOut: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed(),
             ignoreHybrid: 1
           })
+          const network = networkMap[tokenOut.chainId];
+          const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
           if (routeObjArr.length > 0) {
             const amountIn = routeObjArr[0].amountIn;
             if (new BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
-              const network = networkMap[tokenOut.chainId];
-              const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
-              properties.data.push({
-                stepName: stepName,
-                data: {
-                  properties: {
-                    providers: [
-                      {
-                        key: 'OpenSwap',
-                        chainId: tokenOut.chainId,
-                      },
-                    ],
-                    category: 'aggregator',
-                    tokens: [
-                      {
-                        ...tokenInObj,
-                        chainId: tokenIn.chainId,
-                      },
-                      {
-                        ...tokenOutObj,
-                        chainId: tokenOut.chainId,
-                      },
-                    ],
-                    defaultInputValue: 0,
-                    defaultOutputValue: Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
-                    defaultChainId: tokenOut.chainId,
-                    networks: [
-                      {
-                        chainId: tokenOut.chainId,
-                      },
-                    ],
-                    wallets: [
-                      {
-                        name: 'metamask',
-                      },
-                    ]
-                  }
-                }
-              });
+              let propertiesData = this.calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenIn.chainId, tokenOut.chainId, remainingAmountOutDecimals.toFixed());
+              tokenOutPropertiesDataArr.push(propertiesData);
               break;
             }
           }
+        }
+        if (tokenOutPropertiesDataArr.length > 0) {
+          properties.data.push(tokenOutPropertiesDataArr[0]);
         }
       }
     }

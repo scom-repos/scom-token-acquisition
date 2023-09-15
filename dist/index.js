@@ -21,7 +21,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 define("@scom/scom-token-acquisition/index.css.ts", ["require", "exports", "@ijstech/components"], function (require, exports, components_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.spinnerStyle = exports.customStyles = void 0;
+    exports.expandablePanelStyle = exports.spinnerStyle = exports.customStyles = void 0;
     const Theme = components_1.Styles.Theme.ThemeVars;
     exports.customStyles = components_1.Styles.style({
         $nest: {}
@@ -40,6 +40,16 @@ define("@scom/scom-token-acquisition/index.css.ts", ["require", "exports", "@ijs
         borderTopColor: Theme.colors.primary.main,
         "animation": `${spin} 1s ease-in-out infinite`,
         "-webkit-animation": `${spin} 1s ease-in-out infinite`
+    });
+    exports.expandablePanelStyle = components_1.Styles.style({
+        $nest: {
+            'i-panel': {
+                border: 'none'
+            },
+            '#comboEmbedType .icon-btn': {
+                opacity: 0.5
+            }
+        }
     });
 });
 define("@scom/scom-token-acquisition/interface.ts", ["require", "exports"], function (require, exports) {
@@ -73,7 +83,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             super(parent, options);
             this._clientEvents = [];
             this.isRendering = false;
-            this.widgetContainers = new Map();
+            this.stepContainers = new Map();
             this.widgets = new Map();
             this.onStepChanged = this.onStepChanged.bind(this);
             this.onStepDone = this.onStepDone.bind(this);
@@ -107,25 +117,40 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 this.renderEmptyWidget();
             }
             else {
-                this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
+                // this.stepper.steps = [...this.data].map(item => ({ name: item.stepName }));
+                this.stepper.steps = [...this.data].map(item => ({ name: 'Acquire Tokens' }));
                 for (let i = 0; i < this.data.length; i++) {
-                    const widgetContainer = this.$render("i-panel", { visible: i === this.stepper.activeStep });
-                    this.pnlwidgets.appendChild(widgetContainer);
-                    this.widgetContainers.set(i, widgetContainer);
+                    const stepContainer = this.$render("i-panel", { visible: i === this.stepper.activeStep });
+                    this.pnlwidgets.appendChild(stepContainer);
+                    this.stepContainers.set(i, stepContainer);
                 }
-                await this.renderSwapWidget(this.stepper.activeStep);
+                await this.renderStepContainer(this.stepper.activeStep);
             }
             this.isRendering = false;
         }
         renderEmptyWidget() {
-            const widgetContainer = (this.$render("i-panel", null,
+            const stepContainer = (this.$render("i-panel", null,
                 this.$render("i-label", { caption: "No data to display" })));
-            this.pnlwidgets.appendChild(widgetContainer);
+            this.pnlwidgets.appendChild(stepContainer);
         }
-        async renderSwapWidget(index) {
+        toggleExpandablePanel(c) {
+            const icon = c.querySelector('i-icon.expandable-icon');
+            const contentPanel = c.parentNode.querySelector(`i-panel.${index_css_1.expandablePanelStyle}`);
+            if (c.classList.contains('expanded')) {
+                icon.name = 'angle-right';
+                contentPanel.visible = false;
+                c.classList.remove('expanded');
+            }
+            else {
+                icon.name = 'angle-down';
+                contentPanel.visible = true;
+                c.classList.add('expanded');
+            }
+        }
+        async renderStepContainer(index) {
             var _a, _b, _c, _d, _e;
-            const widgetContainer = this.widgetContainers.get(index);
-            if (!widgetContainer)
+            const stepContainer = this.stepContainers.get(index);
+            if (!stepContainer)
                 return;
             const { properties, tag } = ((_a = this.data[index]) === null || _a === void 0 ? void 0 : _a.data) || {};
             const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, 
@@ -135,24 +160,31 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             swapEl.setAttribute('data-step', `${index}`);
             if (tag && swapEl.setTag)
                 swapEl.setTag(tag);
-            widgetContainer.clearInnerHTML();
-            widgetContainer.appendChild(swapEl);
+            stepContainer.clearInnerHTML();
+            const stepName = this.data[index].stepName;
+            const acquireTokensPanel = (this.$render("i-vstack", { padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
+                this.$render("i-hstack", { horizontalAlignment: "space-between", verticalAlignment: "center", padding: { top: '0.5rem', bottom: '0.5rem' }, class: "expanded pointer", onClick: this.toggleExpandablePanel },
+                    this.$render("i-label", { caption: stepName, font: { size: '1rem' }, lineHeight: 1.3 }),
+                    this.$render("i-icon", { class: "expandable-icon", width: 20, height: 28, fill: Theme.text.primary, name: "angle-down" })),
+                this.$render("i-panel", { class: index_css_1.expandablePanelStyle }, swapEl)));
+            // stepContainer.appendChild(swapEl);
+            stepContainer.appendChild(acquireTokensPanel);
             this.widgets.set(swapEl.id, swapEl);
         }
         resetData() {
             this.pnlwidgets.clearInnerHTML();
-            this.widgetContainers = new Map();
+            this.stepContainers = new Map();
             this.widgets = new Map();
         }
         async onStepChanged() {
-            for (let i = 0; i < this.widgetContainers.size; i++) {
-                const el = this.widgetContainers.get(i);
+            for (let i = 0; i < this.stepContainers.size; i++) {
+                const el = this.stepContainers.get(i);
                 if (el)
                     el.visible = this.stepper.activeStep === i;
             }
-            const widgetContainer = this.widgetContainers.get(this.stepper.activeStep);
-            if (!widgetContainer.hasChildNodes()) {
-                await this.renderSwapWidget(this.stepper.activeStep);
+            const stepContainer = this.stepContainers.get(this.stepper.activeStep);
+            if (!stepContainer.hasChildNodes()) {
+                await this.renderStepContainer(this.stepper.activeStep);
             }
             if (this.onChanged)
                 this.onChanged(this, this.stepper.activeStep);
@@ -178,13 +210,13 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             }
         }
         renderCompletedStep(step) {
-            const widgetContainer = this.widgetContainers.get(step);
-            if (!widgetContainer)
+            const stepContainer = this.stepContainers.get(step);
+            if (!stepContainer)
                 return;
-            widgetContainer.appendChild(this.$render("i-vstack", { gap: "1rem", horizontalAlignment: "center" },
+            stepContainer.appendChild(this.$render("i-vstack", { gap: "1rem", horizontalAlignment: "center" },
                 this.$render("i-label", { caption: "Step completed successfully!" }),
                 this.$render("i-panel", null,
-                    this.$render("i-button", { caption: 'Restart Step', padding: { top: '0.5rem', bottom: '0.5rem', left: '1rem', right: '1rem' }, font: { color: Theme.colors.primary.contrastText }, onClick: () => this.renderSwapWidget(step) }))));
+                    this.$render("i-button", { caption: 'Restart Step', padding: { top: '0.5rem', bottom: '0.5rem', left: '1rem', right: '1rem' }, font: { color: Theme.colors.primary.contrastText }, onClick: () => this.renderStepContainer(step) }))));
         }
         // For test
         onUpdateStatus() {
@@ -244,6 +276,39 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             });
             return response.json();
         }
+        calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenInChainId, tokenOutChainId, remainingAmountOutDecimals) {
+            return {
+                stepName: stepName,
+                data: {
+                    properties: {
+                        providers: [
+                            {
+                                key: 'OpenSwap',
+                                chainId: tokenOutChainId,
+                            },
+                        ],
+                        category: 'aggregator',
+                        tokens: [
+                            Object.assign(Object.assign({}, tokenInObj), { chainId: tokenInChainId }),
+                            Object.assign(Object.assign({}, tokenOutObj), { chainId: tokenOutChainId }),
+                        ],
+                        defaultInputValue: 0,
+                        defaultOutputValue: eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
+                        defaultChainId: tokenOutChainId,
+                        networks: [
+                            {
+                                chainId: tokenOutChainId,
+                            },
+                        ],
+                        wallets: [
+                            {
+                                name: 'metamask',
+                            },
+                        ]
+                    }
+                }
+            };
+        }
         async handleFlowStage(target, stage, options) {
             let widget;
             widget = this;
@@ -282,59 +347,34 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
                     const tokenOutBalanceDecimals = eth_wallet_1.Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
                     const wethToken = scom_token_list_1.WETHByChainId[tokenOut.chainId];
+                    let tokenOutAmountDecimals = eth_wallet_1.Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
+                    let remainingAmountOutDecimals = tokenOutAmountDecimals.gt(tokenOutBalanceDecimals) ? tokenOutAmountDecimals.minus(tokenOutBalanceDecimals) : new eth_wallet_1.BigNumber(0);
+                    let tokenOutPropertiesDataArr = [];
                     for (let tokenIn of tokenRequirement.tokensIn) {
                         const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_1.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
                         const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
                         const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
                         const tokenInBalanceDecimals = eth_wallet_1.Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
-                        let tokenOutAmountDecimals = eth_wallet_1.Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
-                        let remainingAmountOutDecimals = new eth_wallet_1.BigNumber(tokenOutAmountDecimals).minus(tokenOutBalanceDecimals);
                         let routeObjArr = await this.getAPI(routeAPI, {
                             chainId: tokenOut.chainId,
                             tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
                             tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
-                            amountOut: remainingAmountOutDecimals,
+                            amountOut: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed(),
                             ignoreHybrid: 1
                         });
+                        const network = networkMap[tokenOut.chainId];
+                        const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
                         if (routeObjArr.length > 0) {
                             const amountIn = routeObjArr[0].amountIn;
                             if (new eth_wallet_1.BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
-                                const network = networkMap[tokenOut.chainId];
-                                const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
-                                properties.data.push({
-                                    stepName: stepName,
-                                    data: {
-                                        properties: {
-                                            providers: [
-                                                {
-                                                    key: 'OpenSwap',
-                                                    chainId: tokenOut.chainId,
-                                                },
-                                            ],
-                                            category: 'aggregator',
-                                            tokens: [
-                                                Object.assign(Object.assign({}, tokenInObj), { chainId: tokenIn.chainId }),
-                                                Object.assign(Object.assign({}, tokenOutObj), { chainId: tokenOut.chainId }),
-                                            ],
-                                            defaultInputValue: 0,
-                                            defaultOutputValue: eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
-                                            defaultChainId: tokenOut.chainId,
-                                            networks: [
-                                                {
-                                                    chainId: tokenOut.chainId,
-                                                },
-                                            ],
-                                            wallets: [
-                                                {
-                                                    name: 'metamask',
-                                                },
-                                            ]
-                                        }
-                                    }
-                                });
+                                let propertiesData = this.calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenIn.chainId, tokenOut.chainId, remainingAmountOutDecimals.toFixed());
+                                tokenOutPropertiesDataArr.push(propertiesData);
                                 break;
                             }
                         }
+                    }
+                    if (tokenOutPropertiesDataArr.length > 0) {
+                        properties.data.push(tokenOutPropertiesDataArr[0]);
                     }
                 }
             }

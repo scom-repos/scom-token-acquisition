@@ -23,3 +23,14 @@ export const spinnerStyle = Styles.style({
   "animation": `${spin} 1s ease-in-out infinite`,
   "-webkit-animation": `${spin} 1s ease-in-out infinite`
 });
+
+export const expandablePanelStyle = Styles.style({
+  $nest: {
+    'i-panel': {
+      border: 'none'
+    },
+    '#comboEmbedType .icon-btn': {
+      opacity: 0.5
+    }
+  }
+})
