@@ -9,15 +9,20 @@ import {
   VStack,
   customModule,
   Styles,
-  Icon
+  Icon,
+  Table,
+  FormatUtils,
+  Label,
+  Link
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
 import { customStyles, expandablePanelStyle } from './index.css';
 import ScomSwap from '@scom/scom-swap';
 import { ISwapData } from './interface';
 import { EventId, generateUUID } from './utils';
-import { BigNumber, IRpcWallet, RpcWallet, Utils } from '@ijstech/eth-wallet';
+import { BigNumber, INetwork, IRpcWallet, RpcWallet, TransactionReceipt, Utils, Wallet } from '@ijstech/eth-wallet';
 import { ITokenObject, tokenStore, WETHByChainId, ChainNativeTokenByChainId } from '@scom/scom-token-list';
+import { parseSwapEvents } from '@scom/scom-dex-list';
 const Theme = Styles.Theme.ThemeVars;
 
 interface ScomTokenAcquisitionElement extends ControlElement {
@@ -45,8 +50,70 @@ export default class ScomTokenAcquisition extends Module {
 
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
+  private tableTransactions: Table;
+  private transactionsInfoArr: any[] = [];
   private stepContainers: Map<number, Panel> = new Map();
   private widgets: Map<string, ScomSwap> = new Map();
+  private TransactionsTableColumns = [
+    {
+      title: 'Date',
+      fieldName: 'timestamp',
+      key: 'timestamp',
+      onRenderCell: (source: Control, columnData: number, rowData: any) => {
+        return FormatUtils.unixToFormattedDate(columnData);
+      }
+    },
+    {
+      title: 'Txn Hash',
+      fieldName: 'hash',
+      key: 'hash',
+      onRenderCell: async (source: Control, columnData: string, rowData: any) => {
+        const networkMap = application.store["networkMap"];
+        const networkInfo: INetwork = networkMap[rowData.token0.chainId];
+        const caption = FormatUtils.truncateTxHash(columnData);
+        const url = networkInfo.blockExplorerUrls[0] + '/tx/' + columnData;
+        const label = new Label(undefined, {
+            caption: caption,
+            font: {size: '0.875rem'},
+            link: {
+              href: url,
+              target: '_blank',
+              font: {size: '0.875rem'}
+            },
+            tooltip: {
+              content: columnData
+            }
+        });
+
+        return label;
+      }
+    },
+    {
+      title: 'Action',
+      fieldName: 'desc',
+      key: 'desc'
+    },
+    {
+      title: 'Token Amount',
+      fieldName: 'token0Amount',
+      key: 'token0Amount',
+      onRenderCell: (source: Control, columnData: string, rowData: any) => {
+        const token0 = rowData.token0;
+        const token0Amount = FormatUtils.formatNumberWithSeparators(Utils.fromDecimals(columnData, token0.decimals).toFixed(), 4);
+        return `${token0Amount} ${token0.symbol}`;
+      }
+    },
+    {
+      title: 'Token Amount',
+      fieldName: 'token1Amount',
+      key: 'token1Amount',
+      onRenderCell: (source: Control, columnData: string, rowData: any) => {
+        const token1 = rowData.token1;
+        const token1Amount = FormatUtils.formatNumberWithSeparators(Utils.fromDecimals(columnData, token1.decimals).toFixed(), 4);
+        return `${token1Amount} ${token1.symbol}`;
+      }
+    }
+  ];
 
   constructor(parent?: Container, options?: any) {
     super(parent, options);
@@ -145,7 +212,7 @@ export default class ScomTokenAcquisition extends Module {
     if (tag && swapEl.setTag) swapEl.setTag(tag);
     stepContainer.clearInnerHTML();
     const stepName = this.data[index].stepName;
-    const acquireTokensPanel = (
+    const swapsPanel = (
       <i-vstack padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}>
         <i-hstack
           horizontalAlignment="space-between"
@@ -159,11 +226,28 @@ export default class ScomTokenAcquisition extends Module {
         </i-hstack>
         <i-panel class={expandablePanelStyle}>
           {swapEl}
-        </i-panel>
+        </i-panel>     
       </i-vstack>
     )
-    // stepContainer.appendChild(swapEl);
-    stepContainer.appendChild(acquireTokensPanel);
+    const transactionsPanel = (
+      <i-vstack padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}>
+        <i-hstack
+          horizontalAlignment="space-between"
+          verticalAlignment="center"
+          padding={{ top: '0.5rem', bottom: '0.5rem' }}
+          class="expanded pointer"
+          onClick={this.toggleExpandablePanel}
+        >
+          <i-label caption='Transactions' font={{ size: '1rem' }} lineHeight={1.3}></i-label>
+          <i-icon class="expandable-icon" width={20} height={28} fill={Theme.text.primary} name="angle-down"></i-icon>
+        </i-hstack>
+        <i-panel class={expandablePanelStyle}>
+          <i-table id="tableTransactions" columns={this.TransactionsTableColumns}></i-table>
+        </i-panel>   
+      </i-vstack>
+    )
+    stepContainer.appendChild(swapsPanel);
+    stepContainer.appendChild(transactionsPanel);
     this.widgets.set(swapEl.id, swapEl);
   }
 
@@ -195,16 +279,54 @@ export default class ScomTokenAcquisition extends Module {
     )
   }
 
-  private onPaid(paidData: any) {
+  private async onPaid(paidData: any) {
     const { id, data } = paidData;
+    const receipt: TransactionReceipt = paidData.receipt;
+    console.log('onPaid', paidData);
+    const clientWallet = Wallet.getClientInstance();
+    const rpcWallet = RpcWallet.getRpcWallet(clientWallet.chainId);
+    const swapEvents = parseSwapEvents(rpcWallet, receipt, data.pairs);
+    console.log('swapEvents', swapEvents);
+    const timestamp = await rpcWallet.getBlockTimestamp(receipt.blockNumber.toString());
+    for (let i = 0; i < swapEvents.length; i++) {
+      const swapEvent = swapEvents[i];
+      const tokenInObj: ITokenObject = {...data.bestRoute[i], chainId: clientWallet.chainId}; //FIXME: chainId
+      const tokenOutObj: ITokenObject = {...data.bestRoute[i + 1], chainId: clientWallet.chainId}; //FIXME: chainId
+      const token0 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenInObj : tokenOutObj;
+      const token1 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenOutObj : tokenInObj;
+      let desc;
+      let token0Amount;
+      let token1Amount;
+      if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
+        desc = `Swap ${token0.symbol} for ${token1.symbol}`;
+        token0Amount = swapEvent.amount0In.toFixed();
+        token1Amount = swapEvent.amount1Out.toFixed();
+      }
+      else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
+        desc = `Swap ${token1.symbol} for ${token0.symbol}`;
+        token0Amount = swapEvent.amount0Out.toFixed();
+        token1Amount = swapEvent.amount1In.toFixed();
+      }
+      this.transactionsInfoArr.push({
+        desc,
+        token0,
+        token1,
+        token0Amount,
+        token1Amount,
+        hash: receipt.transactionHash,
+        timestamp
+      });
+    }
+
+    this.tableTransactions.data = this.transactionsInfoArr;
     if (!id) return;
     const widget = this.widgets.get(id);
     if (widget) {
       const step = Number(widget.getAttribute('data-step'));
       this.stepper.updateStatus(step, true);
-      widget.remove();
-      this.widgets.delete(id);
-      this.renderCompletedStep(step);
+      // widget.remove();
+      // this.widgets.delete(id);
+      // this.renderCompletedStep(step);
     }
   }
 
@@ -233,11 +355,11 @@ export default class ScomTokenAcquisition extends Module {
       this.stepper.updateStatus(i, true);
       const key = widgetKeys.next().value;
       const widget = key && this.widgets.get(key) as ScomSwap;
-      if (widget) {
-        widget.remove();
-        this.widgets.delete(widget.id);
-      }
-      this.renderCompletedStep(i);
+      // if (widget) {
+      //   widget.remove();
+      //   this.widgets.delete(widget.id);
+      // }
+      // this.renderCompletedStep(i);
     }
   }
 
@@ -301,7 +423,7 @@ export default class ScomTokenAcquisition extends Module {
     return response.json();
   }
 
-  calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string) {
+  private calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string) {
     return {
       stepName: stepName,
       data: {

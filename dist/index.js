@@ -74,7 +74,7 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@s
     };
     exports.generateUUID = generateUUID;
 });
-define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts", "@ijstech/eth-wallet", "@scom/scom-token-list"], function (require, exports, components_2, index_css_1, utils_1, eth_wallet_1, scom_token_list_1) {
+define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts", "@ijstech/eth-wallet", "@scom/scom-token-list", "@scom/scom-dex-list"], function (require, exports, components_2, index_css_1, utils_1, eth_wallet_1, scom_token_list_1, scom_dex_list_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const Theme = components_2.Styles.Theme.ThemeVars;
@@ -83,8 +83,68 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             super(parent, options);
             this._clientEvents = [];
             this.isRendering = false;
+            this.transactionsInfoArr = [];
             this.stepContainers = new Map();
             this.widgets = new Map();
+            this.TransactionsTableColumns = [
+                {
+                    title: 'Date',
+                    fieldName: 'timestamp',
+                    key: 'timestamp',
+                    onRenderCell: (source, columnData, rowData) => {
+                        return components_2.FormatUtils.unixToFormattedDate(columnData);
+                    }
+                },
+                {
+                    title: 'Txn Hash',
+                    fieldName: 'hash',
+                    key: 'hash',
+                    onRenderCell: async (source, columnData, rowData) => {
+                        const networkMap = components_2.application.store["networkMap"];
+                        const networkInfo = networkMap[rowData.token0.chainId];
+                        const caption = components_2.FormatUtils.truncateTxHash(columnData);
+                        const url = networkInfo.blockExplorerUrls[0] + '/tx/' + columnData;
+                        const label = new components_2.Label(undefined, {
+                            caption: caption,
+                            font: { size: '0.875rem' },
+                            link: {
+                                href: url,
+                                target: '_blank',
+                                font: { size: '0.875rem' }
+                            },
+                            tooltip: {
+                                content: columnData
+                            }
+                        });
+                        return label;
+                    }
+                },
+                {
+                    title: 'Action',
+                    fieldName: 'desc',
+                    key: 'desc'
+                },
+                {
+                    title: 'Token Amount',
+                    fieldName: 'token0Amount',
+                    key: 'token0Amount',
+                    onRenderCell: (source, columnData, rowData) => {
+                        const token0 = rowData.token0;
+                        const token0Amount = components_2.FormatUtils.formatNumberWithSeparators(eth_wallet_1.Utils.fromDecimals(columnData, token0.decimals).toFixed(), 4);
+                        return `${token0Amount} ${token0.symbol}`;
+                    }
+                },
+                {
+                    title: 'Token Amount',
+                    fieldName: 'token1Amount',
+                    key: 'token1Amount',
+                    onRenderCell: (source, columnData, rowData) => {
+                        const token1 = rowData.token1;
+                        const token1Amount = components_2.FormatUtils.formatNumberWithSeparators(eth_wallet_1.Utils.fromDecimals(columnData, token1.decimals).toFixed(), 4);
+                        return `${token1Amount} ${token1.symbol}`;
+                    }
+                }
+            ];
             this.onStepChanged = this.onStepChanged.bind(this);
             this.onStepDone = this.onStepDone.bind(this);
         }
@@ -162,13 +222,19 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 swapEl.setTag(tag);
             stepContainer.clearInnerHTML();
             const stepName = this.data[index].stepName;
-            const acquireTokensPanel = (this.$render("i-vstack", { padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
+            const swapsPanel = (this.$render("i-vstack", { padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
                 this.$render("i-hstack", { horizontalAlignment: "space-between", verticalAlignment: "center", padding: { top: '0.5rem', bottom: '0.5rem' }, class: "expanded pointer", onClick: this.toggleExpandablePanel },
                     this.$render("i-label", { caption: stepName, font: { size: '1rem' }, lineHeight: 1.3 }),
                     this.$render("i-icon", { class: "expandable-icon", width: 20, height: 28, fill: Theme.text.primary, name: "angle-down" })),
                 this.$render("i-panel", { class: index_css_1.expandablePanelStyle }, swapEl)));
-            // stepContainer.appendChild(swapEl);
-            stepContainer.appendChild(acquireTokensPanel);
+            const transactionsPanel = (this.$render("i-vstack", { padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
+                this.$render("i-hstack", { horizontalAlignment: "space-between", verticalAlignment: "center", padding: { top: '0.5rem', bottom: '0.5rem' }, class: "expanded pointer", onClick: this.toggleExpandablePanel },
+                    this.$render("i-label", { caption: 'Transactions', font: { size: '1rem' }, lineHeight: 1.3 }),
+                    this.$render("i-icon", { class: "expandable-icon", width: 20, height: 28, fill: Theme.text.primary, name: "angle-down" })),
+                this.$render("i-panel", { class: index_css_1.expandablePanelStyle },
+                    this.$render("i-table", { id: "tableTransactions", columns: this.TransactionsTableColumns }))));
+            stepContainer.appendChild(swapsPanel);
+            stepContainer.appendChild(transactionsPanel);
             this.widgets.set(swapEl.id, swapEl);
         }
         resetData() {
@@ -196,17 +262,54 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         initEvents() {
             this._clientEvents.push(components_2.application.EventBus.register(this, "Paid" /* EventId.Paid */, this.onPaid));
         }
-        onPaid(paidData) {
+        async onPaid(paidData) {
             const { id, data } = paidData;
+            const receipt = paidData.receipt;
+            console.log('onPaid', paidData);
+            const clientWallet = eth_wallet_1.Wallet.getClientInstance();
+            const rpcWallet = eth_wallet_1.RpcWallet.getRpcWallet(clientWallet.chainId);
+            const swapEvents = (0, scom_dex_list_1.parseSwapEvents)(rpcWallet, receipt, data.pairs);
+            console.log('swapEvents', swapEvents);
+            const timestamp = await rpcWallet.getBlockTimestamp(receipt.blockNumber.toString());
+            for (let i = 0; i < swapEvents.length; i++) {
+                const swapEvent = swapEvents[i];
+                const tokenInObj = Object.assign(Object.assign({}, data.bestRoute[i]), { chainId: clientWallet.chainId }); //FIXME: chainId
+                const tokenOutObj = Object.assign(Object.assign({}, data.bestRoute[i + 1]), { chainId: clientWallet.chainId }); //FIXME: chainId
+                const token0 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenInObj : tokenOutObj;
+                const token1 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenOutObj : tokenInObj;
+                let desc;
+                let token0Amount;
+                let token1Amount;
+                if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
+                    desc = `Swap ${token0.symbol} for ${token1.symbol}`;
+                    token0Amount = swapEvent.amount0In.toFixed();
+                    token1Amount = swapEvent.amount1Out.toFixed();
+                }
+                else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
+                    desc = `Swap ${token1.symbol} for ${token0.symbol}`;
+                    token0Amount = swapEvent.amount0Out.toFixed();
+                    token1Amount = swapEvent.amount1In.toFixed();
+                }
+                this.transactionsInfoArr.push({
+                    desc,
+                    token0,
+                    token1,
+                    token0Amount,
+                    token1Amount,
+                    hash: receipt.transactionHash,
+                    timestamp
+                });
+            }
+            this.tableTransactions.data = this.transactionsInfoArr;
             if (!id)
                 return;
             const widget = this.widgets.get(id);
             if (widget) {
                 const step = Number(widget.getAttribute('data-step'));
                 this.stepper.updateStatus(step, true);
-                widget.remove();
-                this.widgets.delete(id);
-                this.renderCompletedStep(step);
+                // widget.remove();
+                // this.widgets.delete(id);
+                // this.renderCompletedStep(step);
             }
         }
         renderCompletedStep(step) {
@@ -225,11 +328,11 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 this.stepper.updateStatus(i, true);
                 const key = widgetKeys.next().value;
                 const widget = key && this.widgets.get(key);
-                if (widget) {
-                    widget.remove();
-                    this.widgets.delete(widget.id);
-                }
-                this.renderCompletedStep(i);
+                // if (widget) {
+                //   widget.remove();
+                //   this.widgets.delete(widget.id);
+                // }
+                // this.renderCompletedStep(i);
             }
         }
         onHide() {

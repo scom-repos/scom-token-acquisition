@@ -18,6 +18,7 @@
     "@ijstech/eth-contract": "^0.1.14",
     "@ijstech/eth-wallet": "^0.1.52",
     "@scom/scom-token-list": "^0.1.1",
+    "@scom/scom-dex-list": "^0.1.5",
     "@scom/scom-swap": "^0.1.18",
     "@scom/scom-stepper": "^0.1.0"
   },

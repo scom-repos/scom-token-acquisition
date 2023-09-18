@@ -32,8 +32,6 @@ declare module "@scom/scom-token-acquisition/utils/index.ts" {
 declare module "@scom/scom-token-acquisition" {
     import { Container, Control, ControlElement, Module } from '@ijstech/components';
     import { ISwapData } from "@scom/scom-token-acquisition/interface.ts";
-    import { BigNumber } from '@ijstech/eth-wallet';
-    import { ITokenObject } from '@scom/scom-token-list';
     interface ScomTokenAcquisitionElement extends ControlElement {
         data: ISwapData[];
         onChanged?: (target: Control, activeStep: number) => void;
@@ -54,8 +52,11 @@ declare module "@scom/scom-token-acquisition" {
         onDone: (target: Control) => void;
         private stepper;
         private pnlwidgets;
+        private tableTransactions;
+        private transactionsInfoArr;
         private stepContainers;
         private widgets;
+        private TransactionsTableColumns;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTokenAcquisitionElement, parent?: Container): Promise<ScomTokenAcquisition>;
         private get data();
@@ -77,41 +78,7 @@ declare module "@scom/scom-token-acquisition" {
         init(): void;
         render(): any;
         getAPI(url: string, paramsObj?: any): Promise<any>;
-        calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string): {
-            stepName: string;
-            data: {
-                properties: {
-                    providers: {
-                        key: string;
-                        chainId: number;
-                    }[];
-                    category: string;
-                    tokens: {
-                        chainId: number;
-                        address?: string;
-                        name: string;
-                        decimals: number;
-                        symbol: string;
-                        status?: boolean;
-                        logoURI?: string;
-                        isCommon?: boolean;
-                        balance?: string | number;
-                        isNative?: boolean;
-                        isWETH?: boolean;
-                        isNew?: boolean;
-                    }[];
-                    defaultInputValue: number;
-                    defaultOutputValue: BigNumber;
-                    defaultChainId: number;
-                    networks: {
-                        chainId: number;
-                    }[];
-                    wallets: {
-                        name: string;
-                    }[];
-                };
-            };
-        };
+        private calculateStepPropertiesData;
         handleFlowStage(target: Control, stage: string, options: any): Promise<{
             widget: any;
         }>;
