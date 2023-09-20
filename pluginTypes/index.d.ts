@@ -49,7 +49,7 @@ declare module "@scom/scom-token-acquisition" {
         private _clientEvents;
         private isRendering;
         onChanged: (target: Control, activeStep: number) => void;
-        onDone: (target: Control) => void;
+        onDone: (target: Control) => Promise<void>;
         private stepper;
         private pnlwidgets;
         private tableTransactions;
