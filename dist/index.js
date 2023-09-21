@@ -59,13 +59,22 @@ define("@scom/scom-token-acquisition/interface.ts", ["require", "exports"], func
 define("@scom/scom-token-acquisition/utils/const.ts", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.ApiEndpoints = void 0;
+    exports.ApiEndpoints = {
+        "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
+        "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
+        // "tradingRouting": "http://127.0.0.1:8200/api/v0/trading/tradingRoute",
+        // "bridgeRouting": "http://127.0.0.1:8200/api/v0/trading/bridgeRoute",
+        "bridgeVault": "https://route.openswap.xyz/trading/v1/bridge-vault",
+        "bonds": "https://route.openswap.xyz/trading/v1/bonds-by-chain-id-and-vault-troll-registry",
+        "vaultOrder": "https://route.openswap.xyz/trading/v1/vault-order"
+    };
 });
-define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@scom/scom-token-acquisition/utils/const.ts"], function (require, exports, const_1) {
+define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@ijstech/eth-wallet", "@scom/scom-token-list", "@scom/scom-token-acquisition/utils/const.ts", "@scom/scom-token-acquisition/utils/const.ts"], function (require, exports, eth_wallet_1, scom_token_list_1, const_1, const_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.generateUUID = void 0;
-    ///<amd-module name='@scom/scom-token-acquisition/utils/index.ts'/> 
-    __exportStar(const_1, exports);
+    exports.fetchTokenBalances = exports.calculateStepPropertiesData = exports.getAPI = exports.generateUUID = void 0;
+    __exportStar(const_2, exports);
     const generateUUID = () => {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -73,8 +82,87 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@s
         });
     };
     exports.generateUUID = generateUUID;
+    async function getAPI(url, paramsObj) {
+        let queries = '';
+        if (paramsObj) {
+            try {
+                queries = new URLSearchParams(paramsObj).toString();
+            }
+            catch (err) {
+                console.log('err', err);
+            }
+        }
+        let fullURL = url + (queries ? `?${queries}` : '');
+        const response = await fetch(fullURL, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            },
+        });
+        return response.json();
+    }
+    exports.getAPI = getAPI;
+    function calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenInChainId, tokenOutChainId, remainingAmountOutDecimals) {
+        let category = tokenInChainId === tokenOutChainId ? 'aggregator' : 'cross-chain-swap';
+        let providers = [
+            {
+                key: 'OpenSwap',
+                chainId: tokenInChainId,
+            }
+        ];
+        let networks = [
+            {
+                chainId: tokenInChainId,
+            },
+        ];
+        let defaultInputValue = '0';
+        let defaultOutputValue = '0';
+        if (tokenInChainId !== tokenOutChainId) {
+            providers.push({
+                key: 'OpenSwap',
+                chainId: tokenOutChainId,
+            });
+            networks.push({
+                chainId: tokenOutChainId,
+            });
+            defaultInputValue = eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals).toFixed();
+        }
+        else {
+            defaultOutputValue = eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals).toFixed();
+        }
+        return {
+            stepName: stepName,
+            data: {
+                properties: {
+                    providers: providers,
+                    category: category,
+                    tokens: [
+                        Object.assign(Object.assign({}, tokenInObj), { chainId: tokenInChainId }),
+                        Object.assign(Object.assign({}, tokenOutObj), { chainId: tokenOutChainId }),
+                    ],
+                    defaultInputValue: defaultInputValue,
+                    defaultOutputValue: defaultOutputValue,
+                    defaultChainId: tokenInChainId,
+                    networks: networks,
+                    wallets: [
+                        {
+                            name: 'metamask',
+                        },
+                    ],
+                    apiEndpoints: const_1.ApiEndpoints
+                }
+            }
+        };
+    }
+    exports.calculateStepPropertiesData = calculateStepPropertiesData;
+    async function fetchTokenBalances(chainId) {
+        const rpcWallet = eth_wallet_1.RpcWallet.getRpcWallet(chainId);
+        let tokenBalances = await scom_token_list_1.tokenStore.updateAllTokenBalances(rpcWallet);
+        return tokenBalances;
+    }
+    exports.fetchTokenBalances = fetchTokenBalances;
 });
-define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts", "@ijstech/eth-wallet", "@scom/scom-token-list", "@scom/scom-dex-list"], function (require, exports, components_2, index_css_1, utils_1, eth_wallet_1, scom_token_list_1, scom_dex_list_1) {
+define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/components", "@scom/scom-token-acquisition/index.css.ts", "@scom/scom-token-acquisition/utils/index.ts", "@ijstech/eth-wallet", "@scom/scom-token-list", "@scom/scom-dex-list"], function (require, exports, components_2, index_css_1, utils_1, eth_wallet_2, scom_token_list_2, scom_dex_list_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const Theme = components_2.Styles.Theme.ThemeVars;
@@ -130,7 +218,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     key: 'token0Amount',
                     onRenderCell: (source, columnData, rowData) => {
                         const token0 = rowData.token0;
-                        const token0Amount = components_2.FormatUtils.formatNumber(eth_wallet_1.Utils.fromDecimals(columnData, token0.decimals).toFixed(), {
+                        const token0Amount = components_2.FormatUtils.formatNumber(eth_wallet_2.Utils.fromDecimals(columnData, token0.decimals).toFixed(), {
                             decimalFigures: 4
                         });
                         return `${token0Amount} ${token0.symbol}`;
@@ -142,7 +230,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     key: 'token1Amount',
                     onRenderCell: (source, columnData, rowData) => {
                         const token1 = rowData.token1;
-                        const token1Amount = components_2.FormatUtils.formatNumber(eth_wallet_1.Utils.fromDecimals(columnData, token1.decimals).toFixed(), {
+                        const token1Amount = components_2.FormatUtils.formatNumber(eth_wallet_2.Utils.fromDecimals(columnData, token1.decimals).toFixed(), {
                             decimalFigures: 4
                         });
                         return `${token1Amount} ${token1.symbol}`;
@@ -266,43 +354,94 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         initEvents() {
             this._clientEvents.push(components_2.application.EventBus.register(this, "Paid" /* EventId.Paid */, this.onPaid));
         }
+        async fetchFromVaultOrderApi(transactionHash) {
+            const apiResult = await (0, utils_1.getAPI)(utils_1.ApiEndpoints.vaultOrder, {
+                newOrderTxId: transactionHash
+            });
+            let order;
+            if (apiResult.order) {
+                order = apiResult.order;
+            }
+            else if (apiResult.data) {
+                order = apiResult.data.order;
+            }
+            if ((order === null || order === void 0 ? void 0 : order.status) === 1) {
+                return order;
+            }
+            else {
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
+                return this.fetchFromVaultOrderApi(transactionHash);
+            }
+        }
+        ;
         async onPaid(paidData) {
-            const { id, data } = paidData;
+            const { isCrossChain, id, data } = paidData;
             const receipt = paidData.receipt;
             console.log('onPaid', paidData);
-            const clientWallet = eth_wallet_1.Wallet.getClientInstance();
-            const rpcWallet = eth_wallet_1.RpcWallet.getRpcWallet(clientWallet.chainId);
-            const swapEvents = (0, scom_dex_list_1.parseSwapEvents)(rpcWallet, receipt, data.pairs);
-            console.log('swapEvents', swapEvents);
-            const timestamp = await rpcWallet.getBlockTimestamp(receipt.blockNumber.toString());
-            for (let i = 0; i < swapEvents.length; i++) {
-                const swapEvent = swapEvents[i];
-                const tokenInObj = Object.assign(Object.assign({}, data.bestRoute[i]), { chainId: clientWallet.chainId }); //FIXME: chainId
-                const tokenOutObj = Object.assign(Object.assign({}, data.bestRoute[i + 1]), { chainId: clientWallet.chainId }); //FIXME: chainId
-                const token0 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenInObj : tokenOutObj;
-                const token1 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenOutObj : tokenInObj;
+            const clientWallet = eth_wallet_2.Wallet.getClientInstance();
+            if (isCrossChain) {
+                let order = await this.fetchFromVaultOrderApi(receipt.transactionHash);
+                console.log('order', order);
+                const targetChainRpcWallet = eth_wallet_2.RpcWallet.getRpcWallet(order.targetChainId);
+                const timestamp = await targetChainRpcWallet.getBlockTimestamp(order.swapTxId);
+                let sourceChainTokenMap = scom_token_list_2.tokenStore.getTokenMapByChainId(order.chainId);
+                let targetChainTokenMap = scom_token_list_2.tokenStore.getTokenMapByChainId(order.targetChainId);
+                let inToken = sourceChainTokenMap[order.inToken.toLowerCase()];
+                let outToken = targetChainTokenMap[order.outToken.toLowerCase()];
+                const networkMap = components_2.application.store["networkMap"];
+                const sourceNetwork = networkMap[order.chainId];
+                const targetNetwork = networkMap[order.targetChainId];
                 let desc;
-                let token0Amount;
-                let token1Amount;
-                if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
-                    desc = `Swap ${token0.symbol} for ${token1.symbol}`;
-                    token0Amount = swapEvent.amount0In.toFixed();
-                    token1Amount = swapEvent.amount1Out.toFixed();
+                if (inToken.symbol === outToken.symbol) {
+                    desc = `Bridge ${inToken.symbol} from ${sourceNetwork.chainName} to ${targetNetwork.chainName}`;
                 }
-                else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
-                    desc = `Swap ${token1.symbol} for ${token0.symbol}`;
-                    token0Amount = swapEvent.amount0Out.toFixed();
-                    token1Amount = swapEvent.amount1In.toFixed();
+                else {
+                    desc = `Swap ${inToken.symbol} for ${outToken.symbol} from ${sourceNetwork.chainName} to ${targetNetwork.chainName}`;
                 }
                 this.transactionsInfoArr.push({
-                    desc,
-                    token0,
-                    token1,
-                    token0Amount,
-                    token1Amount,
-                    hash: receipt.transactionHash,
-                    timestamp
+                    desc: desc,
+                    token0: inToken,
+                    token1: outToken,
+                    token0Amount: order.inAmount,
+                    token1Amount: order.outAmount,
+                    hash: order.swapTxId,
+                    timestamp: timestamp
                 });
+            }
+            else {
+                const rpcWallet = eth_wallet_2.RpcWallet.getRpcWallet(clientWallet.chainId);
+                const swapEvents = (0, scom_dex_list_1.parseSwapEvents)(rpcWallet, receipt, data.pairs);
+                console.log('swapEvents', swapEvents);
+                const timestamp = await rpcWallet.getBlockTimestamp(receipt.blockNumber.toString());
+                for (let i = 0; i < swapEvents.length; i++) {
+                    const swapEvent = swapEvents[i];
+                    const tokenInObj = Object.assign(Object.assign({}, data.bestRoute[i]), { chainId: clientWallet.chainId }); //FIXME: chainId
+                    const tokenOutObj = Object.assign(Object.assign({}, data.bestRoute[i + 1]), { chainId: clientWallet.chainId }); //FIXME: chainId
+                    const token0 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenInObj : tokenOutObj;
+                    const token1 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenOutObj : tokenInObj;
+                    let desc;
+                    let token0Amount;
+                    let token1Amount;
+                    if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
+                        desc = `Swap ${token0.symbol} for ${token1.symbol}`;
+                        token0Amount = swapEvent.amount0In.toFixed();
+                        token1Amount = swapEvent.amount1Out.toFixed();
+                    }
+                    else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
+                        desc = `Swap ${token1.symbol} for ${token0.symbol}`;
+                        token0Amount = swapEvent.amount0Out.toFixed();
+                        token1Amount = swapEvent.amount1In.toFixed();
+                    }
+                    this.transactionsInfoArr.push({
+                        desc,
+                        token0,
+                        token1,
+                        token0Amount,
+                        token1Amount,
+                        hash: receipt.transactionHash,
+                        timestamp
+                    });
+                }
             }
             this.tableTransactions.data = this.transactionsInfoArr;
             if (!id)
@@ -364,78 +503,6 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     this.$render("i-panel", null,
                         this.$render("i-vstack", { id: "pnlwidgets", width: "100%" })))));
         }
-        async getAPI(url, paramsObj) {
-            let queries = '';
-            if (paramsObj) {
-                try {
-                    queries = new URLSearchParams(paramsObj).toString();
-                }
-                catch (err) {
-                    console.log('err', err);
-                }
-            }
-            let fullURL = url + (queries ? `?${queries}` : '');
-            const response = await fetch(fullURL, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-            });
-            return response.json();
-        }
-        calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenInChainId, tokenOutChainId, remainingAmountOutDecimals) {
-            let category = tokenInChainId === tokenOutChainId ? 'aggregator' : 'cross-chain-swap';
-            let providers = [
-                {
-                    key: 'OpenSwap',
-                    chainId: tokenInChainId,
-                }
-            ];
-            let networks = [
-                {
-                    chainId: tokenInChainId,
-                },
-            ];
-            if (tokenInChainId !== tokenOutChainId) {
-                providers.push({
-                    key: 'OpenSwap',
-                    chainId: tokenOutChainId,
-                });
-                networks.push({
-                    chainId: tokenOutChainId,
-                });
-            }
-            return {
-                stepName: stepName,
-                data: {
-                    properties: {
-                        providers: providers,
-                        category: category,
-                        tokens: [
-                            Object.assign(Object.assign({}, tokenInObj), { chainId: tokenInChainId }),
-                            Object.assign(Object.assign({}, tokenOutObj), { chainId: tokenOutChainId }),
-                        ],
-                        defaultInputValue: 0,
-                        defaultOutputValue: eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
-                        defaultChainId: tokenInChainId,
-                        networks: networks,
-                        wallets: [
-                            {
-                                name: 'metamask',
-                            },
-                        ],
-                        apiEndpoints: {
-                            "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
-                            "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
-                            // "tradingRouting": "http://127.0.0.1:8200/api/v0/trading/tradingRoute",
-                            // "bridgeRouting": "http://127.0.0.1:8200/api/v0/trading/bridgeRoute",
-                            "bridgeVault": "https://route.openswap.xyz/trading/v1/bridge-vault",
-                            "bonds": "https://route.openswap.xyz/trading/v1/bonds-by-chain-id-and-vault-troll-registry"
-                        }
-                    }
-                }
-            };
-        }
         async handleFlowStage(target, stage, options) {
             let widget;
             widget = this;
@@ -456,47 +523,36 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     });
                 }
             }
-            const tradingRoutingAPI = 'https://route.openswap.xyz/trading/v1/route';
-            const bridgeRoutingAPI = 'https://route.openswap.xyz/trading/v1/cross-chain-route';
             let tokenMapByChainId = {};
             let tokenBalancesByChainId = {};
             for (let chainId of chainIds) {
-                const rpcWallet = eth_wallet_1.RpcWallet.getRpcWallet(chainId);
-                let tokenMap = scom_token_list_1.tokenStore.updateTokenMapData(chainId);
+                let tokenMap = scom_token_list_2.tokenStore.updateTokenMapData(chainId);
                 tokenMapByChainId[chainId] = tokenMap;
-                tokenBalancesByChainId[chainId] = await scom_token_list_1.tokenStore.updateAllTokenBalances(rpcWallet);
+                tokenBalancesByChainId[chainId] = await (0, utils_1.fetchTokenBalances)(chainId);
             }
             const networkMap = components_2.application.store["networkMap"];
             if (tokenRequirements) {
                 for (let tokenRequirement of tokenRequirements) {
                     const tokenOut = tokenRequirement.tokenOut;
-                    const tokenOutAddress = tokenOut.address ? tokenOut.address.toLowerCase() : scom_token_list_1.ChainNativeTokenByChainId[tokenOut.chainId].symbol;
+                    const tokenOutAddress = tokenOut.address ? tokenOut.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenOut.chainId].symbol;
                     const tokenOutObj = tokenMapByChainId[tokenOut.chainId][tokenOutAddress];
                     const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
-                    const tokenOutBalanceDecimals = eth_wallet_1.Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
-                    const wethToken = scom_token_list_1.WETHByChainId[tokenOut.chainId];
-                    let tokenOutAmountDecimals = eth_wallet_1.Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
-                    let remainingAmountOutDecimals = tokenOutAmountDecimals.gt(tokenOutBalanceDecimals) ? tokenOutAmountDecimals.minus(tokenOutBalanceDecimals) : new eth_wallet_1.BigNumber(0);
+                    const tokenOutBalanceDecimals = eth_wallet_2.Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
+                    const wethToken = scom_token_list_2.WETHByChainId[tokenOut.chainId];
+                    let tokenOutAmountDecimals = eth_wallet_2.Utils.toDecimals(tokenOut.amount, tokenOutObj.decimals);
+                    let remainingAmountOutDecimals = tokenOutAmountDecimals.gt(tokenOutBalanceDecimals) ? tokenOutAmountDecimals.minus(tokenOutBalanceDecimals) : new eth_wallet_2.BigNumber(0);
                     let tokenOutPropertiesDataArr = [];
                     for (let tokenIn of tokenRequirement.tokensIn) {
-                        const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_1.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
+                        const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
                         const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
                         const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
-                        const tokenInBalanceDecimals = eth_wallet_1.Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
+                        const tokenInBalanceDecimals = eth_wallet_2.Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
                         let routeAPI;
                         let apiParams;
-                        if (tokenIn.chainId === tokenOut.chainId) {
-                            routeAPI = tradingRoutingAPI;
-                            apiParams = {
-                                chainId: tokenOut.chainId,
-                                tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
-                                tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
-                                amountOut: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed(),
-                                ignoreHybrid: 1
-                            };
-                        }
-                        else {
-                            routeAPI = bridgeRoutingAPI;
+                        const isCrossChain = tokenIn.chainId !== tokenOut.chainId;
+                        if (isCrossChain) {
+                            routeAPI = utils_1.ApiEndpoints.bridgeRouting;
+                            remainingAmountOutDecimals = remainingAmountOutDecimals.plus('300000000000000000'); //FIXME: hardcoded transaction fee
                             apiParams = {
                                 fromChainId: tokenIn.chainId,
                                 toChainId: tokenOut.chainId,
@@ -505,7 +561,17 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                                 amountIn: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed()
                             };
                         }
-                        let APIResult = await this.getAPI(routeAPI, apiParams);
+                        else {
+                            routeAPI = utils_1.ApiEndpoints.tradingRouting;
+                            apiParams = {
+                                chainId: tokenOut.chainId,
+                                tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
+                                tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
+                                amountOut: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed(),
+                                ignoreHybrid: 1
+                            };
+                        }
+                        let APIResult = await (0, utils_1.getAPI)(routeAPI, apiParams);
                         let routeObjArr = [];
                         if (Array.isArray(APIResult)) { //Backward compatibility
                             routeObjArr = APIResult;
@@ -519,9 +585,9 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                         const network = networkMap[tokenOut.chainId];
                         const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
                         if (routeObjArr.length > 0) {
-                            const amountIn = routeObjArr[0].amountIn;
-                            if (new eth_wallet_1.BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
-                                let propertiesData = this.calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenIn.chainId, tokenOut.chainId, remainingAmountOutDecimals.toFixed());
+                            const amountIn = isCrossChain ? routeObjArr[0].targetRoute.amountOut : routeObjArr[0].amountIn;
+                            if (new eth_wallet_2.BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
+                                let propertiesData = (0, utils_1.calculateStepPropertiesData)(stepName, tokenInObj, tokenOutObj, tokenIn.chainId, tokenOut.chainId, remainingAmountOutDecimals.toFixed());
                                 tokenOutPropertiesDataArr.push(propertiesData);
                                 break;
                             }

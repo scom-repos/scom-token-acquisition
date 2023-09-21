@@ -1,3 +1,4 @@
+/// <reference path="@scom/scom-token-list/index.d.ts" />
 /// <amd-module name="@scom/scom-token-acquisition/index.css.ts" />
 declare module "@scom/scom-token-acquisition/index.css.ts" {
     export const customStyles: string;
@@ -22,11 +23,63 @@ declare module "@scom/scom-token-acquisition/utils/const.ts" {
         Paid = "Paid",
         ExpertModeChanged = "ExpertModeChanged"
     }
+    export const ApiEndpoints: {
+        tradingRouting: string;
+        bridgeRouting: string;
+        bridgeVault: string;
+        bonds: string;
+        vaultOrder: string;
+    };
 }
 /// <amd-module name="@scom/scom-token-acquisition/utils/index.ts" />
 declare module "@scom/scom-token-acquisition/utils/index.ts" {
+    import { ITokenObject } from '@scom/scom-token-list';
     export * from "@scom/scom-token-acquisition/utils/const.ts";
     export const generateUUID: () => string;
+    export function getAPI(url: string, paramsObj?: any): Promise<any>;
+    export function calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string): {
+        stepName: string;
+        data: {
+            properties: {
+                providers: {
+                    key: string;
+                    chainId: number;
+                }[];
+                category: string;
+                tokens: {
+                    chainId: number;
+                    address?: string;
+                    name: string;
+                    decimals: number;
+                    symbol: string;
+                    status?: boolean;
+                    logoURI?: string;
+                    isCommon?: boolean;
+                    balance?: string | number;
+                    isNative?: boolean;
+                    isWETH?: boolean;
+                    isNew?: boolean;
+                }[];
+                defaultInputValue: string;
+                defaultOutputValue: string;
+                defaultChainId: number;
+                networks: {
+                    chainId: number;
+                }[];
+                wallets: {
+                    name: string;
+                }[];
+                apiEndpoints: {
+                    tradingRouting: string;
+                    bridgeRouting: string;
+                    bridgeVault: string;
+                    bonds: string;
+                    vaultOrder: string;
+                };
+            };
+        };
+    };
+    export function fetchTokenBalances(chainId: number): Promise<import("@scom/scom-token-list/token.ts").TokenBalancesType>;
 }
 /// <amd-module name="@scom/scom-token-acquisition" />
 declare module "@scom/scom-token-acquisition" {
@@ -71,14 +124,13 @@ declare module "@scom/scom-token-acquisition" {
         private onStepChanged;
         private onStepDone;
         private initEvents;
+        fetchFromVaultOrderApi(transactionHash: string): Promise<any>;
         private onPaid;
         private renderCompletedStep;
         onUpdateStatus(): void;
         onHide(): void;
         init(): void;
         render(): any;
-        getAPI(url: string, paramsObj?: any): Promise<any>;
-        private calculateStepPropertiesData;
         handleFlowStage(target: Control, stage: string, options: any): Promise<{
             widget: any;
         }>;
