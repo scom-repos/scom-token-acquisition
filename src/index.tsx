@@ -99,7 +99,9 @@ export default class ScomTokenAcquisition extends Module {
       key: 'token0Amount',
       onRenderCell: (source: Control, columnData: string, rowData: any) => {
         const token0 = rowData.token0;
-        const token0Amount = FormatUtils.formatNumberWithSeparators(Utils.fromDecimals(columnData, token0.decimals).toFixed(), 4);
+        const token0Amount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, token0.decimals).toFixed(), {
+          decimalFigures: 4
+        });
         return `${token0Amount} ${token0.symbol}`;
       }
     },
@@ -109,7 +111,9 @@ export default class ScomTokenAcquisition extends Module {
       key: 'token1Amount',
       onRenderCell: (source: Control, columnData: string, rowData: any) => {
         const token1 = rowData.token1;
-        const token1Amount = FormatUtils.formatNumberWithSeparators(Utils.fromDecimals(columnData, token1.decimals).toFixed(), 4);
+        const token1Amount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, token1.decimals).toFixed(), {
+          decimalFigures: 4
+        });
         return `${token1Amount} ${token1.symbol}`;
       }
     }
@@ -198,6 +202,7 @@ export default class ScomTokenAcquisition extends Module {
         defaultChainId={properties.defaultChainId}
         wallets={properties.wallets}
         networks={properties.networks}
+        apiEndpoints={properties.apiEndpoints}
         // campaignId={properties.campaignId ?? 0}
         commissions={properties.commissions ?? []}
         tokens={properties.tokens ?? []}
@@ -424,17 +429,33 @@ export default class ScomTokenAcquisition extends Module {
   }
 
   private calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string) {
+    let category = tokenInChainId === tokenOutChainId ? 'aggregator' : 'cross-chain-swap';
+    let providers = [
+      {
+        key: 'OpenSwap',
+        chainId: tokenInChainId,
+      }
+    ];
+    let networks = [
+      {
+        chainId: tokenInChainId,
+      },
+    ]
+    if (tokenInChainId !== tokenOutChainId) {
+      providers.push({
+        key: 'OpenSwap',
+        chainId: tokenOutChainId,
+      });
+      networks.push({
+        chainId: tokenOutChainId,
+      });
+    }
     return {
       stepName: stepName,
       data: {
         properties: {
-          providers: [
-            {
-              key: 'OpenSwap',
-              chainId: tokenOutChainId,
-            },
-          ],
-          category: 'aggregator',
+          providers: providers,
+          category: category,
           tokens: [
             {
               ...tokenInObj,
@@ -447,17 +468,21 @@ export default class ScomTokenAcquisition extends Module {
           ],
           defaultInputValue: 0,
           defaultOutputValue: Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals),
-          defaultChainId: tokenOutChainId,
-          networks: [
-            {
-              chainId: tokenOutChainId,
-            },
-          ],
+          defaultChainId: tokenInChainId,
+          networks: networks,
           wallets: [
             {
               name: 'metamask',
             },
-          ]
+          ],
+          apiEndpoints: {
+              "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
+              "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
+              // "tradingRouting": "http://127.0.0.1:8200/api/v0/trading/tradingRoute",
+              // "bridgeRouting": "http://127.0.0.1:8200/api/v0/trading/bridgeRoute",
+              "bridgeVault": "https://route.openswap.xyz/trading/v1/bridge-vault",
+              "bonds": "https://route.openswap.xyz/trading/v1/bonds-by-chain-id-and-vault-troll-registry"
+          }         
         }
       }
     };
@@ -486,7 +511,8 @@ export default class ScomTokenAcquisition extends Module {
       }
     }
 
-    const routeAPI = 'https://route.openswap.xyz/trading/v1/route';
+    const tradingRoutingAPI = 'https://route.openswap.xyz/trading/v1/route';
+    const bridgeRoutingAPI = 'https://route.openswap.xyz/trading/v1/cross-chain-route';
     let tokenMapByChainId: Record<number, Record<string, ITokenObject>> = {};
     let tokenBalancesByChainId: Record<number, Record<string, string>> = {};
     for (let chainId of chainIds) {
@@ -513,13 +539,39 @@ export default class ScomTokenAcquisition extends Module {
           const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
           const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
           const tokenInBalanceDecimals = Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
-          let routeObjArr: any[] = await this.getAPI(routeAPI, {
-            chainId: tokenOut.chainId,
-            tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
-            tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
-            amountOut: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed(),
-            ignoreHybrid: 1
-          })
+          let routeAPI;
+          let apiParams;
+          if (tokenIn.chainId === tokenOut.chainId) {
+            routeAPI = tradingRoutingAPI;
+            apiParams = {
+              chainId: tokenOut.chainId,
+              tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
+              tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
+              amountOut: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed(),
+              ignoreHybrid: 1
+            }
+          }
+          else {
+            routeAPI = bridgeRoutingAPI;
+            apiParams = {
+              fromChainId: tokenIn.chainId,
+              toChainId: tokenOut.chainId,
+              tokenIn: tokenIn.address ? tokenIn.address : wethToken.address,
+              tokenOut: tokenOut.address ? tokenOut.address : wethToken.address,
+              amountIn: remainingAmountOutDecimals.isZero() ? '1' : remainingAmountOutDecimals.toFixed()
+            }
+          }
+          let APIResult = await this.getAPI(routeAPI, apiParams)
+          let routeObjArr: any[] = [];
+          if (Array.isArray(APIResult)) { //Backward compatibility
+            routeObjArr = APIResult;
+          }
+          else if (APIResult.routes) {
+            routeObjArr = APIResult.routes;
+          }
+          else if (APIResult.data) {
+            routeObjArr = APIResult.data;
+          }
           const network = networkMap[tokenOut.chainId];
           const stepName = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol} on ${network.chainName}`;
           if (routeObjArr.length > 0) {
