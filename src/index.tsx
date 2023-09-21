@@ -46,7 +46,7 @@ export default class ScomTokenAcquisition extends Module {
   private _clientEvents: any[] = [];
   private isRendering: boolean = false;
   public onChanged: (target: Control, activeStep: number) => void;
-  public onDone: (target: Control) => void;
+  public onDone: (target: Control) => Promise<void>;
 
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
@@ -274,8 +274,9 @@ export default class ScomTokenAcquisition extends Module {
     if (this.onChanged) this.onChanged(this, this.stepper.activeStep);
   }
 
-  private onStepDone() {
-    if (this.onDone) this.onDone(this);
+  private async onStepDone() {
+    if (this.onDone) 
+      await this.onDone(this);
   }
 
   private initEvents() {

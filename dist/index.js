@@ -259,9 +259,9 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             if (this.onChanged)
                 this.onChanged(this, this.stepper.activeStep);
         }
-        onStepDone() {
+        async onStepDone() {
             if (this.onDone)
-                this.onDone(this);
+                await this.onDone(this);
         }
         initEvents() {
             this._clientEvents.push(components_2.application.EventBus.register(this, "Paid" /* EventId.Paid */, this.onPaid));
