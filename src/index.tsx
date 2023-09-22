@@ -13,7 +13,8 @@ import {
   Table,
   FormatUtils,
   Label,
-  Link
+  Link,
+  IEventBus
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
 import { customStyles, expandablePanelStyle } from './index.css';
@@ -47,7 +48,10 @@ export default class ScomTokenAcquisition extends Module {
   private isRendering: boolean = false;
   public onChanged: (target: Control, activeStep: number) => void;
   public onDone: (target: Control) => Promise<void>;
-
+  private invokerId: string;
+  private executionProperties: any;
+  private $eventBus: IEventBus;
+  
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
   private tableTransactions: Table;
@@ -69,7 +73,7 @@ export default class ScomTokenAcquisition extends Module {
       key: 'hash',
       onRenderCell: async (source: Control, columnData: string, rowData: any) => {
         const networkMap = application.store["networkMap"];
-        const networkInfo: INetwork = networkMap[rowData.token0.chainId];
+        const networkInfo: INetwork = networkMap[rowData.toToken.chainId];
         const caption = FormatUtils.truncateTxHash(columnData);
         const url = networkInfo.blockExplorerUrls[0] + '/tx/' + columnData;
         const label = new Label(undefined, {
@@ -94,27 +98,27 @@ export default class ScomTokenAcquisition extends Module {
       key: 'desc'
     },
     {
-      title: 'Token Amount',
-      fieldName: 'token0Amount',
-      key: 'token0Amount',
+      title: 'Token In Amount',
+      fieldName: 'fromTokenAmount',
+      key: 'fromTokenAmount',
       onRenderCell: (source: Control, columnData: string, rowData: any) => {
-        const token0 = rowData.token0;
-        const token0Amount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, token0.decimals).toFixed(), {
+        const fromToken = rowData.fromToken;
+        const fromTokenAmount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, fromToken.decimals).toFixed(), {
           decimalFigures: 4
         });
-        return `${token0Amount} ${token0.symbol}`;
+        return `${fromTokenAmount} ${fromToken.symbol}`;
       }
     },
     {
-      title: 'Token Amount',
-      fieldName: 'token1Amount',
-      key: 'token1Amount',
+      title: 'Token Out Amount',
+      fieldName: 'toTokenAmount',
+      key: 'toTokenAmount',
       onRenderCell: (source: Control, columnData: string, rowData: any) => {
-        const token1 = rowData.token1;
-        const token1Amount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, token1.decimals).toFixed(), {
+        const toToken = rowData.toToken;
+        const toTokenAmount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, toToken.decimals).toFixed(), {
           decimalFigures: 4
         });
-        return `${token1Amount} ${token1.symbol}`;
+        return `${toTokenAmount} ${toToken.symbol}`;
       }
     }
   ];
@@ -123,6 +127,7 @@ export default class ScomTokenAcquisition extends Module {
     super(parent, options);
     this.onStepChanged = this.onStepChanged.bind(this);
     this.onStepDone = this.onStepDone.bind(this);
+    this.$eventBus = application.EventBus;
   }
 
   static async create(options?: ScomTokenAcquisitionElement, parent?: Container) {
@@ -312,8 +317,9 @@ export default class ScomTokenAcquisition extends Module {
     if (isCrossChain) {
       let order = await this.fetchFromVaultOrderApi(receipt.transactionHash);
       console.log('order', order);
-      const targetChainRpcWallet = RpcWallet.getRpcWallet(order.targetChainId);
-      const timestamp = await targetChainRpcWallet.getBlockTimestamp(order.swapTxId);
+      // const targetChainRpcWallet = RpcWallet.getRpcWallet(order.targetChainId);
+      // const timestamp = await targetChainRpcWallet.getBlockTimestamp(order.swapTxId);
+      const timestamp = order.timeCreated;
       let sourceChainTokenMap = tokenStore.getTokenMapByChainId(order.chainId);
       let targetChainTokenMap = tokenStore.getTokenMapByChainId(order.targetChainId);
       let inToken = sourceChainTokenMap[order.inToken.toLowerCase()];
@@ -330,10 +336,10 @@ export default class ScomTokenAcquisition extends Module {
       }
       this.transactionsInfoArr.push({
         desc: desc,
-        token0: inToken,
-        token1: outToken,
-        token0Amount: order.inAmount,
-        token1Amount: order.outAmount,
+        fromToken: inToken,
+        toToken: outToken,
+        fromTokenAmount: order.inAmount,
+        toTokenAmount: order.outAmount,
         hash: order.swapTxId,
         timestamp: timestamp
       });
@@ -347,33 +353,37 @@ export default class ScomTokenAcquisition extends Module {
         const swapEvent = swapEvents[i];
         const tokenInObj: ITokenObject = {...data.bestRoute[i], chainId: clientWallet.chainId}; //FIXME: chainId
         const tokenOutObj: ITokenObject = {...data.bestRoute[i + 1], chainId: clientWallet.chainId}; //FIXME: chainId
-        const token0 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenInObj : tokenOutObj;
-        const token1 = tokenInObj.address.toLowerCase() < tokenOutObj.address.toLowerCase() ? tokenOutObj : tokenInObj;
-        let desc;
-        let token0Amount;
-        let token1Amount;
+
+        let desc = `Swap ${tokenInObj.symbol} for ${tokenInObj.symbol}`;
+        let fromTokenAmount;
+        let toTokenAmount;
         if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
-          desc = `Swap ${token0.symbol} for ${token1.symbol}`;
-          token0Amount = swapEvent.amount0In.toFixed();
-          token1Amount = swapEvent.amount1Out.toFixed();
+          fromTokenAmount = swapEvent.amount0In.toFixed();
+          toTokenAmount = swapEvent.amount1Out.toFixed();
         }
         else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
-          desc = `Swap ${token1.symbol} for ${token0.symbol}`;
-          token0Amount = swapEvent.amount0Out.toFixed();
-          token1Amount = swapEvent.amount1In.toFixed();
+          fromTokenAmount = swapEvent.amount0Out.toFixed();
+          toTokenAmount = swapEvent.amount1In.toFixed();
         }
         this.transactionsInfoArr.push({
           desc,
-          token0,
-          token1,
-          token0Amount,
-          token1Amount,
+          fromToken: tokenInObj,
+          toToken: tokenOutObj,
+          fromTokenAmount,
+          toTokenAmount,
           hash: receipt.transactionHash,
           timestamp
         });
       }
     }
     this.tableTransactions.data = this.transactionsInfoArr;
+
+    let eventName = `${this.invokerId}:nextStep`;
+    this.$eventBus.dispatch(eventName, {
+        executionProperties: this.executionProperties,
+        transactions: this.transactionsInfoArr
+    });
+
     if (!id) return;
     const widget = this.widgets.get(id);
     if (widget) {
@@ -470,7 +480,8 @@ export default class ScomTokenAcquisition extends Module {
       onChanged: options?.onChanged,
       onDone: options?.onDone
     }
-
+    this.invokerId = options.invokerId;
+    this.executionProperties = options.properties;
     let chainIds = new Set<number>();
     let tokenRequirements = options?.tokenRequirements;
     if (tokenRequirements) {
