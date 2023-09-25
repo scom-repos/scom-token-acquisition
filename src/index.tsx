@@ -10,10 +10,6 @@ import {
   customModule,
   Styles,
   Icon,
-  Table,
-  FormatUtils,
-  Label,
-  Link,
   IEventBus
 } from '@ijstech/components';
 import ScomStepper from '@scom/scom-stepper';
@@ -54,74 +50,9 @@ export default class ScomTokenAcquisition extends Module {
   
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
-  private tableTransactions: Table;
   private transactionsInfoArr: any[] = [];
   private stepContainers: Map<number, Panel> = new Map();
   private widgets: Map<string, ScomSwap> = new Map();
-  private TransactionsTableColumns = [
-    {
-      title: 'Date',
-      fieldName: 'timestamp',
-      key: 'timestamp',
-      onRenderCell: (source: Control, columnData: number, rowData: any) => {
-        return FormatUtils.unixToFormattedDate(columnData);
-      }
-    },
-    {
-      title: 'Txn Hash',
-      fieldName: 'hash',
-      key: 'hash',
-      onRenderCell: async (source: Control, columnData: string, rowData: any) => {
-        const networkMap = application.store["networkMap"];
-        const networkInfo: INetwork = networkMap[rowData.toToken.chainId];
-        const caption = FormatUtils.truncateTxHash(columnData);
-        const url = networkInfo.blockExplorerUrls[0] + '/tx/' + columnData;
-        const label = new Label(undefined, {
-            caption: caption,
-            font: {size: '0.875rem'},
-            link: {
-              href: url,
-              target: '_blank',
-              font: {size: '0.875rem'}
-            },
-            tooltip: {
-              content: columnData
-            }
-        });
-
-        return label;
-      }
-    },
-    {
-      title: 'Action',
-      fieldName: 'desc',
-      key: 'desc'
-    },
-    {
-      title: 'Token In Amount',
-      fieldName: 'fromTokenAmount',
-      key: 'fromTokenAmount',
-      onRenderCell: (source: Control, columnData: string, rowData: any) => {
-        const fromToken = rowData.fromToken;
-        const fromTokenAmount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, fromToken.decimals).toFixed(), {
-          decimalFigures: 4
-        });
-        return `${fromTokenAmount} ${fromToken.symbol}`;
-      }
-    },
-    {
-      title: 'Token Out Amount',
-      fieldName: 'toTokenAmount',
-      key: 'toTokenAmount',
-      onRenderCell: (source: Control, columnData: string, rowData: any) => {
-        const toToken = rowData.toToken;
-        const toTokenAmount = FormatUtils.formatNumber(Utils.fromDecimals(columnData, toToken.decimals).toFixed(), {
-          decimalFigures: 4
-        });
-        return `${toTokenAmount} ${toToken.symbol}`;
-      }
-    }
-  ];
 
   constructor(parent?: Container, options?: any) {
     super(parent, options);
@@ -239,25 +170,7 @@ export default class ScomTokenAcquisition extends Module {
         </i-panel>     
       </i-vstack>
     )
-    const transactionsPanel = (
-      <i-vstack padding={{ top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' }}>
-        <i-hstack
-          horizontalAlignment="space-between"
-          verticalAlignment="center"
-          padding={{ top: '0.5rem', bottom: '0.5rem' }}
-          class="expanded pointer"
-          onClick={this.toggleExpandablePanel}
-        >
-          <i-label caption='Transactions' font={{ size: '1rem' }} lineHeight={1.3}></i-label>
-          <i-icon class="expandable-icon" width={20} height={28} fill={Theme.text.primary} name="angle-down"></i-icon>
-        </i-hstack>
-        <i-panel class={expandablePanelStyle}>
-          <i-table id="tableTransactions" columns={this.TransactionsTableColumns}></i-table>
-        </i-panel>   
-      </i-vstack>
-    )
     stepContainer.appendChild(swapsPanel);
-    stepContainer.appendChild(transactionsPanel);
     this.widgets.set(swapEl.id, swapEl);
   }
 
@@ -376,12 +289,14 @@ export default class ScomTokenAcquisition extends Module {
         });
       }
     }
-    this.tableTransactions.data = this.transactionsInfoArr;
 
-    let eventName = `${this.invokerId}:nextStep`;
-    this.$eventBus.dispatch(eventName, {
-        executionProperties: this.executionProperties,
-        transactions: this.transactionsInfoArr
+    const nextStepEventName = `${this.invokerId}:nextStep`;
+    this.$eventBus.dispatch(nextStepEventName, {
+        executionProperties: this.executionProperties
+    });
+    const addTransactionsEventName = `${this.invokerId}:addTransactions`;
+    this.$eventBus.dispatch(addTransactionsEventName, {
+      list: this.transactionsInfoArr
     });
 
     if (!id) return;

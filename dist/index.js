@@ -174,69 +174,6 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.transactionsInfoArr = [];
             this.stepContainers = new Map();
             this.widgets = new Map();
-            this.TransactionsTableColumns = [
-                {
-                    title: 'Date',
-                    fieldName: 'timestamp',
-                    key: 'timestamp',
-                    onRenderCell: (source, columnData, rowData) => {
-                        return components_2.FormatUtils.unixToFormattedDate(columnData);
-                    }
-                },
-                {
-                    title: 'Txn Hash',
-                    fieldName: 'hash',
-                    key: 'hash',
-                    onRenderCell: async (source, columnData, rowData) => {
-                        const networkMap = components_2.application.store["networkMap"];
-                        const networkInfo = networkMap[rowData.toToken.chainId];
-                        const caption = components_2.FormatUtils.truncateTxHash(columnData);
-                        const url = networkInfo.blockExplorerUrls[0] + '/tx/' + columnData;
-                        const label = new components_2.Label(undefined, {
-                            caption: caption,
-                            font: { size: '0.875rem' },
-                            link: {
-                                href: url,
-                                target: '_blank',
-                                font: { size: '0.875rem' }
-                            },
-                            tooltip: {
-                                content: columnData
-                            }
-                        });
-                        return label;
-                    }
-                },
-                {
-                    title: 'Action',
-                    fieldName: 'desc',
-                    key: 'desc'
-                },
-                {
-                    title: 'Token In Amount',
-                    fieldName: 'fromTokenAmount',
-                    key: 'fromTokenAmount',
-                    onRenderCell: (source, columnData, rowData) => {
-                        const fromToken = rowData.fromToken;
-                        const fromTokenAmount = components_2.FormatUtils.formatNumber(eth_wallet_2.Utils.fromDecimals(columnData, fromToken.decimals).toFixed(), {
-                            decimalFigures: 4
-                        });
-                        return `${fromTokenAmount} ${fromToken.symbol}`;
-                    }
-                },
-                {
-                    title: 'Token Out Amount',
-                    fieldName: 'toTokenAmount',
-                    key: 'toTokenAmount',
-                    onRenderCell: (source, columnData, rowData) => {
-                        const toToken = rowData.toToken;
-                        const toTokenAmount = components_2.FormatUtils.formatNumber(eth_wallet_2.Utils.fromDecimals(columnData, toToken.decimals).toFixed(), {
-                            decimalFigures: 4
-                        });
-                        return `${toTokenAmount} ${toToken.symbol}`;
-                    }
-                }
-            ];
             this.onStepChanged = this.onStepChanged.bind(this);
             this.onStepDone = this.onStepDone.bind(this);
             this.$eventBus = components_2.application.EventBus;
@@ -320,14 +257,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     this.$render("i-label", { caption: stepName, font: { size: '1rem' }, lineHeight: 1.3 }),
                     this.$render("i-icon", { class: "expandable-icon", width: 20, height: 28, fill: Theme.text.primary, name: "angle-down" })),
                 this.$render("i-panel", { class: index_css_1.expandablePanelStyle }, swapEl)));
-            const transactionsPanel = (this.$render("i-vstack", { padding: { top: '0.5rem', bottom: '0.5rem', left: '0.5rem', right: '0.5rem' } },
-                this.$render("i-hstack", { horizontalAlignment: "space-between", verticalAlignment: "center", padding: { top: '0.5rem', bottom: '0.5rem' }, class: "expanded pointer", onClick: this.toggleExpandablePanel },
-                    this.$render("i-label", { caption: 'Transactions', font: { size: '1rem' }, lineHeight: 1.3 }),
-                    this.$render("i-icon", { class: "expandable-icon", width: 20, height: 28, fill: Theme.text.primary, name: "angle-down" })),
-                this.$render("i-panel", { class: index_css_1.expandablePanelStyle },
-                    this.$render("i-table", { id: "tableTransactions", columns: this.TransactionsTableColumns }))));
             stepContainer.appendChild(swapsPanel);
-            stepContainer.appendChild(transactionsPanel);
             this.widgets.set(swapEl.id, swapEl);
         }
         resetData() {
@@ -441,11 +371,13 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     });
                 }
             }
-            this.tableTransactions.data = this.transactionsInfoArr;
-            let eventName = `${this.invokerId}:nextStep`;
-            this.$eventBus.dispatch(eventName, {
-                executionProperties: this.executionProperties,
-                transactions: this.transactionsInfoArr
+            const nextStepEventName = `${this.invokerId}:nextStep`;
+            this.$eventBus.dispatch(nextStepEventName, {
+                executionProperties: this.executionProperties
+            });
+            const addTransactionsEventName = `${this.invokerId}:addTransactions`;
+            this.$eventBus.dispatch(addTransactionsEventName, {
+                list: this.transactionsInfoArr
             });
             if (!id)
                 return;

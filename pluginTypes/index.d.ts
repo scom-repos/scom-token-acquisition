@@ -108,11 +108,9 @@ declare module "@scom/scom-token-acquisition" {
         private $eventBus;
         private stepper;
         private pnlwidgets;
-        private tableTransactions;
         private transactionsInfoArr;
         private stepContainers;
         private widgets;
-        private TransactionsTableColumns;
         constructor(parent?: Container, options?: any);
         static create(options?: ScomTokenAcquisitionElement, parent?: Container): Promise<ScomTokenAcquisition>;
         private get data();
