@@ -266,8 +266,7 @@ export default class ScomTokenAcquisition extends Module {
         const swapEvent = swapEvents[i];
         const tokenInObj: ITokenObject = {...data.bestRoute[i], chainId: clientWallet.chainId}; //FIXME: chainId
         const tokenOutObj: ITokenObject = {...data.bestRoute[i + 1], chainId: clientWallet.chainId}; //FIXME: chainId
-
-        let desc = `Swap ${tokenInObj.symbol} for ${tokenInObj.symbol}`;
+        let desc = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol}`;
         let fromTokenAmount;
         let toTokenAmount;
         if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
@@ -275,8 +274,8 @@ export default class ScomTokenAcquisition extends Module {
           toTokenAmount = swapEvent.amount1Out.toFixed();
         }
         else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
-          fromTokenAmount = swapEvent.amount0Out.toFixed();
-          toTokenAmount = swapEvent.amount1In.toFixed();
+          fromTokenAmount = swapEvent.amount1In.toFixed();
+          toTokenAmount = swapEvent.amount0Out.toFixed();
         }
         this.transactionsInfoArr.push({
           desc,
@@ -421,7 +420,7 @@ export default class ScomTokenAcquisition extends Module {
       for (let tokenRequirement of tokenRequirements) {
         const tokenOut = tokenRequirement.tokenOut;
         const tokenOutAddress = tokenOut.address ? tokenOut.address.toLowerCase() : ChainNativeTokenByChainId[tokenOut.chainId].symbol;
-        const tokenOutObj = tokenMapByChainId[tokenOut.chainId][tokenOutAddress];
+        const tokenOutObj = {...tokenMapByChainId[tokenOut.chainId][tokenOutAddress], chainId: tokenOut.chainId};
         const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
         const tokenOutBalanceDecimals = Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
         const wethToken = WETHByChainId[tokenOut.chainId];
@@ -430,7 +429,7 @@ export default class ScomTokenAcquisition extends Module {
         let tokenOutPropertiesDataArr = [];
         for (let tokenIn of tokenRequirement.tokensIn) {
           const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : ChainNativeTokenByChainId[tokenIn.chainId].symbol;
-          const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
+          const tokenInObj = {...tokenMapByChainId[tokenIn.chainId][tokenInAddress], chainId: tokenIn.chainId};
           const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
           const tokenInBalanceDecimals = Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
           let routeAPI;
@@ -473,7 +472,21 @@ export default class ScomTokenAcquisition extends Module {
           if (routeObjArr.length > 0) {
             const amountIn = isCrossChain ? routeObjArr[0].targetRoute.amountOut : routeObjArr[0].amountIn;
             if (new BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
-              let propertiesData = calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenIn.chainId, tokenOut.chainId, remainingAmountOutDecimals.toFixed());
+              const tokensInObjArr: ITokenObject[] = tokenRequirement.tokensIn.map(tokenIn => {
+                const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : ChainNativeTokenByChainId[tokenIn.chainId].symbol;
+                const tokenInObj = {...tokenMapByChainId[tokenIn.chainId][tokenInAddress], chainId: tokenIn.chainId};
+                return tokenInObj;
+              }).filter((v: ITokenObject) => v.chainId !== tokenIn.chainId || v.address !== tokenInObj.address);
+              tokensInObjArr.unshift(tokenInObj);
+              // const tokensInObjArr = [tokenInObj];
+              console.log('tokensInObjArr', tokensInObjArr);
+              let propertiesData = calculateStepPropertiesData(
+                stepName, 
+                Array.from(chainIds),
+                tokensInObjArr, 
+                tokenOutObj,
+                remainingAmountOutDecimals.toFixed()
+              );
               tokenOutPropertiesDataArr.push(propertiesData);
               break;
             }

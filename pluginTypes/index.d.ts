@@ -37,7 +37,7 @@ declare module "@scom/scom-token-acquisition/utils/index.ts" {
     export * from "@scom/scom-token-acquisition/utils/const.ts";
     export const generateUUID: () => string;
     export function getAPI(url: string, paramsObj?: any): Promise<any>;
-    export function calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string): {
+    export function calculateStepPropertiesData(stepName: string, chainIds: number[], tokenInObjArr: ITokenObject[], tokenOutObj: ITokenObject, remainingAmountOutDecimals: string): {
         stepName: string;
         data: {
             properties: {
@@ -46,20 +46,7 @@ declare module "@scom/scom-token-acquisition/utils/index.ts" {
                     chainId: number;
                 }[];
                 category: string;
-                tokens: {
-                    chainId: number;
-                    address?: string;
-                    name: string;
-                    decimals: number;
-                    symbol: string;
-                    status?: boolean;
-                    logoURI?: string;
-                    isCommon?: boolean;
-                    balance?: string | number;
-                    isNative?: boolean;
-                    isWETH?: boolean;
-                    isNew?: boolean;
-                }[];
+                tokens: ITokenObject[];
                 defaultInputValue: string;
                 defaultOutputValue: string;
                 defaultChainId: number;

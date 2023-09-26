@@ -30,29 +30,29 @@ export async function getAPI(url: string, paramsObj?: any): Promise<any> {
   return response.json();
 }
 
-export function calculateStepPropertiesData(stepName: string, tokenInObj: ITokenObject, tokenOutObj: ITokenObject, tokenInChainId: number, tokenOutChainId: number, remainingAmountOutDecimals: string) {
-  let category = tokenInChainId === tokenOutChainId ? 'aggregator' : 'cross-chain-swap';
-  let providers = [
+export function calculateStepPropertiesData(
+  stepName: string, 
+  chainIds: number[],
+  tokenInObjArr: ITokenObject[], 
+  tokenOutObj: ITokenObject, 
+  remainingAmountOutDecimals: string
+) {
+  const defaultTokenInObj = tokenInObjArr[0];
+  let category = defaultTokenInObj.chainId === tokenOutObj.chainId ? 'aggregator' : 'cross-chain-swap';
+  let providers = chainIds.map(v => (
     {
       key: 'OpenSwap',
-      chainId: tokenInChainId,
+      chainId: v,
     }
-  ];
-  let networks = [
+  ));
+  let networks = chainIds.map(v => (
     {
-      chainId: tokenInChainId,
-    },
-  ]
+      chainId: v,
+    }
+  ));
   let defaultInputValue = '0';
   let defaultOutputValue = '0';
-  if (tokenInChainId !== tokenOutChainId) {
-    providers.push({
-      key: 'OpenSwap',
-      chainId: tokenOutChainId,
-    });
-    networks.push({
-      chainId: tokenOutChainId,
-    });
+  if (defaultTokenInObj.chainId !== tokenOutObj.chainId) {
     defaultInputValue = Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals).toFixed();
   }
   else {
@@ -65,18 +65,12 @@ export function calculateStepPropertiesData(stepName: string, tokenInObj: IToken
         providers: providers,
         category: category,
         tokens: [
-          {
-            ...tokenInObj,
-            chainId: tokenInChainId,
-          },
-          {
-            ...tokenOutObj,
-            chainId: tokenOutChainId,
-          },
+          ...tokenInObjArr,
+          tokenOutObj,
         ],
         defaultInputValue: defaultInputValue,
         defaultOutputValue: defaultOutputValue,
-        defaultChainId: tokenInChainId,
+        defaultChainId: defaultTokenInObj.chainId,
         networks: networks,
         wallets: [
           {

@@ -102,29 +102,19 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@i
         return response.json();
     }
     exports.getAPI = getAPI;
-    function calculateStepPropertiesData(stepName, tokenInObj, tokenOutObj, tokenInChainId, tokenOutChainId, remainingAmountOutDecimals) {
-        let category = tokenInChainId === tokenOutChainId ? 'aggregator' : 'cross-chain-swap';
-        let providers = [
-            {
-                key: 'OpenSwap',
-                chainId: tokenInChainId,
-            }
-        ];
-        let networks = [
-            {
-                chainId: tokenInChainId,
-            },
-        ];
+    function calculateStepPropertiesData(stepName, chainIds, tokenInObjArr, tokenOutObj, remainingAmountOutDecimals) {
+        const defaultTokenInObj = tokenInObjArr[0];
+        let category = defaultTokenInObj.chainId === tokenOutObj.chainId ? 'aggregator' : 'cross-chain-swap';
+        let providers = chainIds.map(v => ({
+            key: 'OpenSwap',
+            chainId: v,
+        }));
+        let networks = chainIds.map(v => ({
+            chainId: v,
+        }));
         let defaultInputValue = '0';
         let defaultOutputValue = '0';
-        if (tokenInChainId !== tokenOutChainId) {
-            providers.push({
-                key: 'OpenSwap',
-                chainId: tokenOutChainId,
-            });
-            networks.push({
-                chainId: tokenOutChainId,
-            });
+        if (defaultTokenInObj.chainId !== tokenOutObj.chainId) {
             defaultInputValue = eth_wallet_1.Utils.fromDecimals(remainingAmountOutDecimals, tokenOutObj.decimals).toFixed();
         }
         else {
@@ -137,12 +127,12 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@i
                     providers: providers,
                     category: category,
                     tokens: [
-                        Object.assign(Object.assign({}, tokenInObj), { chainId: tokenInChainId }),
-                        Object.assign(Object.assign({}, tokenOutObj), { chainId: tokenOutChainId }),
+                        ...tokenInObjArr,
+                        tokenOutObj,
                     ],
                     defaultInputValue: defaultInputValue,
                     defaultOutputValue: defaultOutputValue,
-                    defaultChainId: tokenInChainId,
+                    defaultChainId: defaultTokenInObj.chainId,
                     networks: networks,
                     wallets: [
                         {
@@ -349,7 +339,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     const swapEvent = swapEvents[i];
                     const tokenInObj = Object.assign(Object.assign({}, data.bestRoute[i]), { chainId: clientWallet.chainId }); //FIXME: chainId
                     const tokenOutObj = Object.assign(Object.assign({}, data.bestRoute[i + 1]), { chainId: clientWallet.chainId }); //FIXME: chainId
-                    let desc = `Swap ${tokenInObj.symbol} for ${tokenInObj.symbol}`;
+                    let desc = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol}`;
                     let fromTokenAmount;
                     let toTokenAmount;
                     if (swapEvent.amount0In.gt(0) && swapEvent.amount1Out.gt(0)) {
@@ -357,8 +347,8 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                         toTokenAmount = swapEvent.amount1Out.toFixed();
                     }
                     else if (swapEvent.amount0Out.gt(0) && swapEvent.amount1In.gt(0)) {
-                        fromTokenAmount = swapEvent.amount0Out.toFixed();
-                        toTokenAmount = swapEvent.amount1In.toFixed();
+                        fromTokenAmount = swapEvent.amount1In.toFixed();
+                        toTokenAmount = swapEvent.amount0Out.toFixed();
                     }
                     this.transactionsInfoArr.push({
                         desc,
@@ -472,7 +462,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 for (let tokenRequirement of tokenRequirements) {
                     const tokenOut = tokenRequirement.tokenOut;
                     const tokenOutAddress = tokenOut.address ? tokenOut.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenOut.chainId].symbol;
-                    const tokenOutObj = tokenMapByChainId[tokenOut.chainId][tokenOutAddress];
+                    const tokenOutObj = Object.assign(Object.assign({}, tokenMapByChainId[tokenOut.chainId][tokenOutAddress]), { chainId: tokenOut.chainId });
                     const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
                     const tokenOutBalanceDecimals = eth_wallet_2.Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
                     const wethToken = scom_token_list_2.WETHByChainId[tokenOut.chainId];
@@ -481,7 +471,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     let tokenOutPropertiesDataArr = [];
                     for (let tokenIn of tokenRequirement.tokensIn) {
                         const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
-                        const tokenInObj = tokenMapByChainId[tokenIn.chainId][tokenInAddress];
+                        const tokenInObj = Object.assign(Object.assign({}, tokenMapByChainId[tokenIn.chainId][tokenInAddress]), { chainId: tokenIn.chainId });
                         const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
                         const tokenInBalanceDecimals = eth_wallet_2.Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
                         let routeAPI;
@@ -524,7 +514,15 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                         if (routeObjArr.length > 0) {
                             const amountIn = isCrossChain ? routeObjArr[0].targetRoute.amountOut : routeObjArr[0].amountIn;
                             if (new eth_wallet_2.BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
-                                let propertiesData = (0, utils_1.calculateStepPropertiesData)(stepName, tokenInObj, tokenOutObj, tokenIn.chainId, tokenOut.chainId, remainingAmountOutDecimals.toFixed());
+                                const tokensInObjArr = tokenRequirement.tokensIn.map(tokenIn => {
+                                    const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
+                                    const tokenInObj = Object.assign(Object.assign({}, tokenMapByChainId[tokenIn.chainId][tokenInAddress]), { chainId: tokenIn.chainId });
+                                    return tokenInObj;
+                                }).filter((v) => v.chainId !== tokenIn.chainId || v.address !== tokenInObj.address);
+                                tokensInObjArr.unshift(tokenInObj);
+                                // const tokensInObjArr = [tokenInObj];
+                                console.log('tokensInObjArr', tokensInObjArr);
+                                let propertiesData = (0, utils_1.calculateStepPropertiesData)(stepName, Array.from(chainIds), tokensInObjArr, tokenOutObj, remainingAmountOutDecimals.toFixed());
                                 tokenOutPropertiesDataArr.push(propertiesData);
                                 break;
                             }
