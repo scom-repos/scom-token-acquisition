@@ -47,6 +47,8 @@ declare module "@scom/scom-token-acquisition/utils/index.ts" {
                 }[];
                 category: string;
                 tokens: ITokenObject[];
+                defaultInputToken: ITokenObject;
+                defaultOutputToken: ITokenObject;
                 defaultInputValue: string;
                 defaultOutputValue: string;
                 defaultChainId: number;

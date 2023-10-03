@@ -61,10 +61,13 @@ define("@scom/scom-token-acquisition/utils/const.ts", ["require", "exports"], fu
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ApiEndpoints = void 0;
     exports.ApiEndpoints = {
-        "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
-        "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
         // "tradingRouting": "http://127.0.0.1:8200/api/v0/trading/tradingRoute",
         // "bridgeRouting": "http://127.0.0.1:8200/api/v0/trading/bridgeRoute",
+        // "bridgeVault": "http://127.0.0.1:8200/api/v0/trading/bridgeVault",
+        // "bonds": "http://127.0.0.1:8200/api/v0/trading/bridgeBonds",
+        // "vaultOrder": "http://127.0.0.1:8200/api/v0/trading/vaultOrder"
+        "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
+        "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
         "bridgeVault": "https://route.openswap.xyz/trading/v1/bridge-vault",
         "bonds": "https://route.openswap.xyz/trading/v1/bonds-by-chain-id-and-vault-troll-registry",
         "vaultOrder": "https://route.openswap.xyz/trading/v1/vault-order"
@@ -130,6 +133,8 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@i
                         ...tokenInObjArr,
                         tokenOutObj,
                     ],
+                    defaultInputToken: defaultTokenInObj,
+                    defaultOutputToken: tokenOutObj,
                     defaultInputValue: defaultInputValue,
                     defaultOutputValue: defaultOutputValue,
                     defaultChainId: defaultTokenInObj.chainId,
@@ -235,7 +240,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             const { properties, tag } = ((_a = this.data[index]) === null || _a === void 0 ? void 0 : _a.data) || {};
             const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, apiEndpoints: properties.apiEndpoints, 
                 // campaignId={properties.campaignId ?? 0}
-                commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '', defaultInputValue: properties.defaultInputValue, defaultOutputValue: properties.defaultOutputValue }));
+                commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '', defaultInputValue: properties.defaultInputValue, defaultOutputValue: properties.defaultOutputValue, defaultInputToken: properties.defaultInputToken, defaultOutputToken: properties.defaultOutputToken }));
             swapEl.id = `swap-${(0, utils_1.generateUUID)()}`;
             swapEl.setAttribute('data-step', `${index}`);
             if (tag && swapEl.setTag)

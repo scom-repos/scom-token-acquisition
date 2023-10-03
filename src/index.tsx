@@ -146,6 +146,8 @@ export default class ScomTokenAcquisition extends Module {
         title={properties.title ?? ''}
         defaultInputValue={properties.defaultInputValue}
         defaultOutputValue={properties.defaultOutputValue}
+        defaultInputToken={properties.defaultInputToken}
+        defaultOutputToken={properties.defaultOutputToken}
       ></i-scom-swap>
     )
     swapEl.id = `swap-${generateUUID()}`;

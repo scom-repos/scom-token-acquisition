@@ -68,6 +68,8 @@ export function calculateStepPropertiesData(
           ...tokenInObjArr,
           tokenOutObj,
         ],
+        defaultInputToken: defaultTokenInObj,
+        defaultOutputToken: tokenOutObj,
         defaultInputValue: defaultInputValue,
         defaultOutputValue: defaultOutputValue,
         defaultChainId: defaultTokenInObj.chainId,
