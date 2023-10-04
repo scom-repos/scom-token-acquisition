@@ -61,16 +61,21 @@ define("@scom/scom-token-acquisition/utils/const.ts", ["require", "exports"], fu
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ApiEndpoints = void 0;
     exports.ApiEndpoints = {
+        "tradingRouting": "https://board-data.openswap.xyz/api/v0/trading/tradingRoute",
+        "bridgeRouting": "https://board-data.openswap.xyz/api/v0/trading/bridgeRoute",
+        "bridgeVault": "https://board-data.openswap.xyz/api/v0/trading/bridgeVault",
+        "bonds": "https://board-data.openswap.xyz/api/v0/trading/bridgeBonds",
+        "vaultOrder": "https://board-data.openswap.xyz/api/v0/trading/vaultOrder"
         // "tradingRouting": "http://127.0.0.1:8200/api/v0/trading/tradingRoute",
         // "bridgeRouting": "http://127.0.0.1:8200/api/v0/trading/bridgeRoute",
         // "bridgeVault": "http://127.0.0.1:8200/api/v0/trading/bridgeVault",
         // "bonds": "http://127.0.0.1:8200/api/v0/trading/bridgeBonds",
         // "vaultOrder": "http://127.0.0.1:8200/api/v0/trading/vaultOrder"
-        "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
-        "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
-        "bridgeVault": "https://route.openswap.xyz/trading/v1/bridge-vault",
-        "bonds": "https://route.openswap.xyz/trading/v1/bonds-by-chain-id-and-vault-troll-registry",
-        "vaultOrder": "https://route.openswap.xyz/trading/v1/vault-order"
+        // "tradingRouting": "https://route.openswap.xyz/trading/v1/route",
+        // "bridgeRouting": "https://route.openswap.xyz/trading/v1/cross-chain-route",
+        // "bridgeVault": "https://route.openswap.xyz/trading/v1/bridge-vault",
+        // "bonds": "https://route.openswap.xyz/trading/v1/bonds-by-chain-id-and-vault-troll-registry",
+        // "vaultOrder": "https://route.openswap.xyz/trading/v1/vault-order"
     };
 });
 define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@ijstech/eth-wallet", "@scom/scom-token-list", "@scom/scom-token-acquisition/utils/const.ts", "@scom/scom-token-acquisition/utils/const.ts"], function (require, exports, eth_wallet_1, scom_token_list_1, const_1, const_2) {
@@ -107,7 +112,8 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@i
     exports.getAPI = getAPI;
     function calculateStepPropertiesData(stepName, chainIds, tokenInObjArr, tokenOutObj, remainingAmountOutDecimals) {
         const defaultTokenInObj = tokenInObjArr[0];
-        let category = defaultTokenInObj.chainId === tokenOutObj.chainId ? 'aggregator' : 'cross-chain-swap';
+        // let category = defaultTokenInObj.chainId === tokenOutObj.chainId ? 'aggregator' : 'cross-chain-swap';
+        let category = 'cross-chain-swap';
         let providers = chainIds.map(v => ({
             key: 'OpenSwap',
             chainId: v,

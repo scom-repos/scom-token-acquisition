@@ -38,7 +38,8 @@ export function calculateStepPropertiesData(
   remainingAmountOutDecimals: string
 ) {
   const defaultTokenInObj = tokenInObjArr[0];
-  let category = defaultTokenInObj.chainId === tokenOutObj.chainId ? 'aggregator' : 'cross-chain-swap';
+  // let category = defaultTokenInObj.chainId === tokenOutObj.chainId ? 'aggregator' : 'cross-chain-swap';
+  let category = 'cross-chain-swap';
   let providers = chainIds.map(v => (
     {
       key: 'OpenSwap',
