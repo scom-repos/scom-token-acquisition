@@ -44,10 +44,10 @@ export default class ScomTokenAcquisition extends Module {
   private isRendering: boolean = false;
   public onChanged: (target: Control, activeStep: number) => void;
   public onDone: (target: Control) => Promise<void>;
-  private invokerId: string;
+  private handleNextStep: (data: any) => Promise<void>;
+  private handleAddTransactions: (data: any) => Promise<void>;
   private executionProperties: any;
-  private $eventBus: IEventBus;
-  
+
   private stepper: ScomStepper;
   private pnlwidgets: VStack;
   private transactionsInfoArr: any[] = [];
@@ -56,9 +56,6 @@ export default class ScomTokenAcquisition extends Module {
 
   constructor(parent?: Container, options?: any) {
     super(parent, options);
-    this.onStepChanged = this.onStepChanged.bind(this);
-    this.onStepDone = this.onStepDone.bind(this);
-    this.$eventBus = application.EventBus;
   }
 
   static async create(options?: ScomTokenAcquisitionElement, parent?: Container) {
@@ -291,14 +288,16 @@ export default class ScomTokenAcquisition extends Module {
       }
     }
 
-    const nextStepEventName = `${this.invokerId}:nextStep`;
-    this.$eventBus.dispatch(nextStepEventName, {
+    if (this.handleNextStep) {
+      this.handleNextStep({
         executionProperties: this.executionProperties
-    });
-    const addTransactionsEventName = `${this.invokerId}:addTransactions`;
-    this.$eventBus.dispatch(addTransactionsEventName, {
-      list: this.transactionsInfoArr
-    });
+      })
+    }
+    if (this.handleAddTransactions) {
+      this.handleAddTransactions({
+        list: this.transactionsInfoArr
+      })
+    }
 
     if (!id) return;
     const widget = this.widgets.get(id);
@@ -354,6 +353,8 @@ export default class ScomTokenAcquisition extends Module {
   init() {
     this.isReadyCallbackQueued = true;
     super.init();
+    this.onStepChanged = this.onStepChanged.bind(this);
+    this.onStepDone = this.onStepDone.bind(this);
     this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
     this.onDone = this.getAttribute('onDone', true) || this.onDone;
     const data = this.getAttribute('data', true);
@@ -396,8 +397,9 @@ export default class ScomTokenAcquisition extends Module {
       onChanged: options?.onChanged,
       onDone: options?.onDone
     }
-    this.invokerId = options.invokerId;
     this.executionProperties = options.properties;
+    this.handleNextStep = options.onNextStep;
+    this.handleAddTransactions = options.onAddTransactions;
     let chainIds = new Set<number>();
     let tokenRequirements = options?.tokenRequirements;
     if (tokenRequirements) {

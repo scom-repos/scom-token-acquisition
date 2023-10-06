@@ -92,9 +92,9 @@ declare module "@scom/scom-token-acquisition" {
         private isRendering;
         onChanged: (target: Control, activeStep: number) => void;
         onDone: (target: Control) => Promise<void>;
-        private invokerId;
+        private handleNextStep;
+        private handleAddTransactions;
         private executionProperties;
-        private $eventBus;
         private stepper;
         private pnlwidgets;
         private transactionsInfoArr;

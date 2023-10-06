@@ -175,9 +175,6 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             this.transactionsInfoArr = [];
             this.stepContainers = new Map();
             this.widgets = new Map();
-            this.onStepChanged = this.onStepChanged.bind(this);
-            this.onStepDone = this.onStepDone.bind(this);
-            this.$eventBus = components_2.application.EventBus;
         }
         static async create(options, parent) {
             let self = new this(parent, options);
@@ -372,14 +369,16 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     });
                 }
             }
-            const nextStepEventName = `${this.invokerId}:nextStep`;
-            this.$eventBus.dispatch(nextStepEventName, {
-                executionProperties: this.executionProperties
-            });
-            const addTransactionsEventName = `${this.invokerId}:addTransactions`;
-            this.$eventBus.dispatch(addTransactionsEventName, {
-                list: this.transactionsInfoArr
-            });
+            if (this.handleNextStep) {
+                this.handleNextStep({
+                    executionProperties: this.executionProperties
+                });
+            }
+            if (this.handleAddTransactions) {
+                this.handleAddTransactions({
+                    list: this.transactionsInfoArr
+                });
+            }
             if (!id)
                 return;
             const widget = this.widgets.get(id);
@@ -423,6 +422,8 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         init() {
             this.isReadyCallbackQueued = true;
             super.init();
+            this.onStepChanged = this.onStepChanged.bind(this);
+            this.onStepDone = this.onStepDone.bind(this);
             this.onChanged = this.getAttribute('onChanged', true) || this.onChanged;
             this.onDone = this.getAttribute('onDone', true) || this.onDone;
             const data = this.getAttribute('data', true);
@@ -449,8 +450,9 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 onChanged: options === null || options === void 0 ? void 0 : options.onChanged,
                 onDone: options === null || options === void 0 ? void 0 : options.onDone
             };
-            this.invokerId = options.invokerId;
             this.executionProperties = options.properties;
+            this.handleNextStep = options.onNextStep;
+            this.handleAddTransactions = options.onAddTransactions;
             let chainIds = new Set();
             let tokenRequirements = options === null || options === void 0 ? void 0 : options.tokenRequirements;
             if (tokenRequirements) {
