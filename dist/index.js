@@ -443,8 +443,10 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
         async handleFlowStage(target, stage, options) {
             let widget;
             widget = this;
-            target.appendChild(widget);
-            await widget.ready();
+            if (!options.isWidgetConnected) {
+                target.appendChild(widget);
+                await widget.ready();
+            }
             let properties = {
                 data: [],
                 onChanged: options === null || options === void 0 ? void 0 : options.onChanged,

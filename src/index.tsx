@@ -389,8 +389,10 @@ export default class ScomTokenAcquisition extends Module {
   async handleFlowStage(target: Control, stage: string, options: any) {
     let widget;
     widget = this;
-    target.appendChild(widget);
-    await widget.ready();
+    if (!options.isWidgetConnected) {
+      target.appendChild(widget);
+      await widget.ready();
+    }
     let properties = {
       data: [
       ],
@@ -400,6 +402,7 @@ export default class ScomTokenAcquisition extends Module {
     this.executionProperties = options.properties;
     this.handleNextStep = options.onNextStep;
     this.handleAddTransactions = options.onAddTransactions;
+
     let chainIds = new Set<number>();
     let tokenRequirements = options?.tokenRequirements;
     if (tokenRequirements) {
