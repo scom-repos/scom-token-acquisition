@@ -87,7 +87,6 @@ export function calculateStepPropertiesData(
 }
 
 export async function fetchTokenBalances(chainId: number) {
-  const rpcWallet = RpcWallet.getRpcWallet(chainId);
-  let tokenBalances = await tokenStore.updateAllTokenBalances(rpcWallet);
+  let tokenBalances = await tokenStore.updateTokenBalancesByChainId(chainId)
   return tokenBalances;
 }

@@ -157,8 +157,7 @@ define("@scom/scom-token-acquisition/utils/index.ts", ["require", "exports", "@i
     }
     exports.calculateStepPropertiesData = calculateStepPropertiesData;
     async function fetchTokenBalances(chainId) {
-        const rpcWallet = eth_wallet_1.RpcWallet.getRpcWallet(chainId);
-        let tokenBalances = await scom_token_list_1.tokenStore.updateAllTokenBalances(rpcWallet);
+        let tokenBalances = await scom_token_list_1.tokenStore.updateTokenBalancesByChainId(chainId);
         return tokenBalances;
     }
     exports.fetchTokenBalances = fetchTokenBalances;
