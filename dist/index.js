@@ -243,7 +243,6 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, apiEndpoints: properties.apiEndpoints, 
                 // campaignId={properties.campaignId ?? 0}
                 commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '', defaultInputValue: properties.defaultInputValue, defaultOutputValue: properties.defaultOutputValue, defaultInputToken: properties.defaultInputToken, defaultOutputToken: properties.defaultOutputToken }));
-            swapEl.id = `swap-${(0, utils_1.generateUUID)()}`;
             swapEl.setAttribute('data-step', `${index}`);
             if (tag && swapEl.setTag)
                 swapEl.setTag(tag);
@@ -255,7 +254,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     this.$render("i-icon", { class: "expandable-icon", width: 20, height: 28, fill: Theme.text.primary, name: "angle-down" })),
                 this.$render("i-panel", { class: index_css_1.expandablePanelStyle }, swapEl)));
             stepContainer.appendChild(swapsPanel);
-            this.widgets.set(swapEl.id, swapEl);
+            this.widgets.set(swapEl.uuid, swapEl);
         }
         resetData() {
             this.pnlwidgets.clearInnerHTML();

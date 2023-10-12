@@ -147,7 +147,6 @@ export default class ScomTokenAcquisition extends Module {
         defaultOutputToken={properties.defaultOutputToken}
       ></i-scom-swap>
     )
-    swapEl.id = `swap-${generateUUID()}`;
     swapEl.setAttribute('data-step', `${index}`);
     if (tag && swapEl.setTag) swapEl.setTag(tag);
     stepContainer.clearInnerHTML();
@@ -170,7 +169,7 @@ export default class ScomTokenAcquisition extends Module {
       </i-vstack>
     )
     stepContainer.appendChild(swapsPanel);
-    this.widgets.set(swapEl.id, swapEl);
+    this.widgets.set(swapEl.uuid, swapEl);
   }
 
   private resetData() {
