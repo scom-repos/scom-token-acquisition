@@ -181,19 +181,17 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             return self;
         }
         get data() {
-            var _a;
-            return (_a = this._data) !== null && _a !== void 0 ? _a : [];
+            return this._data ?? [];
         }
         set data(value) {
-            this._data = value !== null && value !== void 0 ? value : [];
+            this._data = value ?? [];
         }
         setData(value) {
-            this.data = value !== null && value !== void 0 ? value : [];
+            this.data = value ?? [];
             this.renderUI();
         }
         getData() {
-            var _a;
-            return (_a = this._data) !== null && _a !== void 0 ? _a : [];
+            return this._data ?? [];
         }
         async renderUI() {
             if (this.isRendering)
@@ -235,14 +233,13 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             }
         }
         async renderStepContainer(index) {
-            var _a, _b, _c, _d, _e;
             const stepContainer = this.stepContainers.get(index);
             if (!stepContainer)
                 return;
-            const { properties, tag } = ((_a = this.data[index]) === null || _a === void 0 ? void 0 : _a.data) || {};
+            const { properties, tag } = this.data[index]?.data || {};
             const swapEl = (this.$render("i-scom-swap", { category: properties.category, providers: properties.providers, defaultChainId: properties.defaultChainId, wallets: properties.wallets, networks: properties.networks, apiEndpoints: properties.apiEndpoints, 
                 // campaignId={properties.campaignId ?? 0}
-                commissions: (_b = properties.commissions) !== null && _b !== void 0 ? _b : [], tokens: (_c = properties.tokens) !== null && _c !== void 0 ? _c : [], logo: (_d = properties.logo) !== null && _d !== void 0 ? _d : '', title: (_e = properties.title) !== null && _e !== void 0 ? _e : '', defaultInputValue: properties.defaultInputValue, defaultOutputValue: properties.defaultOutputValue, defaultInputToken: properties.defaultInputToken, defaultOutputToken: properties.defaultOutputToken }));
+                commissions: properties.commissions ?? [], tokens: properties.tokens ?? [], logo: properties.logo ?? '', title: properties.title ?? '', defaultInputValue: properties.defaultInputValue, defaultOutputValue: properties.defaultOutputValue, defaultInputToken: properties.defaultInputToken, defaultOutputToken: properties.defaultOutputToken }));
             swapEl.setAttribute('data-step', `${index}`);
             if (tag && swapEl.setTag)
                 swapEl.setTag(tag);
@@ -292,7 +289,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             else if (apiResult.data) {
                 order = apiResult.data.order;
             }
-            if ((order === null || order === void 0 ? void 0 : order.status) === 1) {
+            if (order?.status === 1) {
                 return order;
             }
             else {
@@ -343,8 +340,8 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 const timestamp = await rpcWallet.getBlockTimestamp(receipt.blockNumber.toString());
                 for (let i = 0; i < swapEvents.length; i++) {
                     const swapEvent = swapEvents[i];
-                    const tokenInObj = Object.assign(Object.assign({}, data.bestRoute[i]), { chainId: clientWallet.chainId }); //FIXME: chainId
-                    const tokenOutObj = Object.assign(Object.assign({}, data.bestRoute[i + 1]), { chainId: clientWallet.chainId }); //FIXME: chainId
+                    const tokenInObj = { ...data.bestRoute[i], chainId: clientWallet.chainId }; //FIXME: chainId
+                    const tokenOutObj = { ...data.bestRoute[i + 1], chainId: clientWallet.chainId }; //FIXME: chainId
                     let desc = `Swap ${tokenInObj.symbol} for ${tokenOutObj.symbol}`;
                     let fromTokenAmount;
                     let toTokenAmount;
@@ -447,14 +444,14 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
             }
             let properties = {
                 data: [],
-                onChanged: options === null || options === void 0 ? void 0 : options.onChanged,
-                onDone: options === null || options === void 0 ? void 0 : options.onDone
+                onChanged: options?.onChanged,
+                onDone: options?.onDone
             };
             this.executionProperties = options.properties;
             this.handleNextStep = options.onNextStep;
             this.handleAddTransactions = options.onAddTransactions;
             let chainIds = new Set();
-            let tokenRequirements = options === null || options === void 0 ? void 0 : options.tokenRequirements;
+            let tokenRequirements = options?.tokenRequirements;
             if (tokenRequirements) {
                 for (let tokenRequirement of tokenRequirements) {
                     chainIds.add(tokenRequirement.tokenOut.chainId);
@@ -475,7 +472,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                 for (let tokenRequirement of tokenRequirements) {
                     const tokenOut = tokenRequirement.tokenOut;
                     const tokenOutAddress = tokenOut.address ? tokenOut.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenOut.chainId].symbol;
-                    const tokenOutObj = Object.assign(Object.assign({}, tokenMapByChainId[tokenOut.chainId][tokenOutAddress]), { chainId: tokenOut.chainId });
+                    const tokenOutObj = { ...tokenMapByChainId[tokenOut.chainId][tokenOutAddress], chainId: tokenOut.chainId };
                     const tokenOutBalance = tokenBalancesByChainId[tokenOut.chainId][tokenOutAddress];
                     const tokenOutBalanceDecimals = eth_wallet_2.Utils.toDecimals(tokenOutBalance, tokenOutObj.decimals);
                     const wethToken = scom_token_list_2.WETHByChainId[tokenOut.chainId];
@@ -484,7 +481,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                     let tokenOutPropertiesDataArr = [];
                     for (let tokenIn of tokenRequirement.tokensIn) {
                         const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
-                        const tokenInObj = Object.assign(Object.assign({}, tokenMapByChainId[tokenIn.chainId][tokenInAddress]), { chainId: tokenIn.chainId });
+                        const tokenInObj = { ...tokenMapByChainId[tokenIn.chainId][tokenInAddress], chainId: tokenIn.chainId };
                         const tokenInBalance = tokenBalancesByChainId[tokenIn.chainId][tokenInAddress];
                         const tokenInBalanceDecimals = eth_wallet_2.Utils.toDecimals(tokenInBalance, tokenInObj.decimals);
                         let routeAPI;
@@ -529,7 +526,7 @@ define("@scom/scom-token-acquisition", ["require", "exports", "@ijstech/componen
                             if (new eth_wallet_2.BigNumber(amountIn).lte(tokenInBalanceDecimals)) {
                                 const tokensInObjArr = tokenRequirement.tokensIn.map(tokenIn => {
                                     const tokenInAddress = tokenIn.address ? tokenIn.address.toLowerCase() : scom_token_list_2.ChainNativeTokenByChainId[tokenIn.chainId].symbol;
-                                    const tokenInObj = Object.assign(Object.assign({}, tokenMapByChainId[tokenIn.chainId][tokenInAddress]), { chainId: tokenIn.chainId });
+                                    const tokenInObj = { ...tokenMapByChainId[tokenIn.chainId][tokenInAddress], chainId: tokenIn.chainId };
                                     return tokenInObj;
                                 }).filter((v) => v.chainId !== tokenIn.chainId || v.address !== tokenInObj.address);
                                 tokensInObjArr.unshift(tokenInObj);
